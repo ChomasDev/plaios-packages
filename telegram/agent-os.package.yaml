@@ -1,0 +1,91 @@
+schemaVersion: 1
+id: telegram
+name: Telegram
+version: 0.1.0
+description: Receive Telegram messages and deliver correlated agent responses
+interfaces:
+  - id: telegram.input
+    kind: input
+    name: TelegramAdapter
+    entry: .
+    export: .
+    className: TelegramAdapter
+    description: Receives Telegram messages using Bot API long polling
+    channel: telegram
+    surfaces: [network]
+    permissions: [network.inbound, network.outbound]
+    required: []
+    config:
+      - key: botToken
+        env: TELEGRAM_BOT_TOKEN
+        type: secret
+        required: true
+        description: Telegram Bot API token
+      - key: chatId
+        env: TELEGRAM_CHAT_ID
+        type: string
+        required: true
+        description: Allowed Telegram chat id
+      - key: pollTimeoutSeconds
+        env: TELEGRAM_POLL_TIMEOUT_SECONDS
+        type: number
+        required: false
+        default: 25
+        description: Telegram long-poll timeout
+      - key: maxImageBytes
+        env: TELEGRAM_MAX_IMAGE_BYTES
+        type: number
+        required: false
+        default: 10485760
+        description: Maximum Telegram image download size in bytes
+      - key: userIdMap
+        env: TELEGRAM_USER_ID_MAP
+        type: string
+        required: false
+        description: Telegram sender ID to application user ID mappings
+    startup:
+      when: ifConfigured
+    web:
+      entry: ./web/input
+      export: default
+      styles: ./web/styles.css
+  - id: telegram.output
+    kind: output
+    name: TelegramAdapter
+    entry: .
+    export: .
+    className: TelegramAdapter
+    description: Sends responses to the originating or configured Telegram chat
+    channel: telegram
+    surfaces: [network]
+    permissions: [network.outbound]
+    required: [input]
+    config:
+      - key: botToken
+        env: TELEGRAM_BOT_TOKEN
+        type: secret
+        required: true
+        description: Telegram Bot API token
+      - key: chatId
+        env: TELEGRAM_CHAT_ID
+        type: string
+        required: true
+        description: Default Telegram chat id
+      - key: pollTimeoutSeconds
+        env: TELEGRAM_POLL_TIMEOUT_SECONDS
+        type: number
+        required: false
+        default: 25
+        description: Telegram long-poll timeout
+      - key: maxImageBytes
+        env: TELEGRAM_MAX_IMAGE_BYTES
+        type: number
+        required: false
+        default: 10485760
+        description: Maximum Telegram image download size in bytes
+    startup:
+      when: ifConfigured
+    web:
+      entry: ./web/output
+      export: default
+      styles: ./web/styles.css
