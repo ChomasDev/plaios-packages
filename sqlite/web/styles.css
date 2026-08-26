@@ -1,0 +1,13 @@
+@import "@agent-os/microfrontend/styles.css";
+
+@source ".";
+
+@layer components {
+  .agentos-sqlite-console [data-slot="card"],
+  .agentos-sqlite-console [data-slot="button"],
+  .agentos-sqlite-console [data-slot="input"],
+  .agentos-sqlite-console [data-slot="textarea"],
+  .agentos-sqlite-console [data-slot="badge"] {
+    border-radius: 0;
+  }
+}

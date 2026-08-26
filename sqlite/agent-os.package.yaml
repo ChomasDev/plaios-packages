@@ -1,0 +1,35 @@
+schemaVersion: 1
+id: sqlite
+name: SQLite
+version: 0.1.1
+description: Capability-scoped local SQLite database with a full management console
+interfaces:
+  - id: sqlite.database
+    kind: database
+    name: SQLiteDatabaseProvider
+    entry: .
+    export: .
+    className: SQLiteDatabaseProvider
+    description: Provides isolated SQLite namespaces and an opt-in database administration bridge
+    surfaces: [filesystem]
+    permissions: [filesystem.read, filesystem.write]
+    required: []
+    config:
+      - key: databasePath
+        env: AGENT_OS_SQLITE_PATH
+        type: string
+        required: false
+        default: .agent-os/agent-os.sqlite
+        description: SQLite database path or :memory:
+      - key: enableForeignKeys
+        env: AGENT_OS_SQLITE_FOREIGN_KEYS
+        type: boolean
+        required: false
+        default: true
+        description: Enable SQLite foreign key enforcement
+    startup:
+      when: always
+    web:
+      entry: ./web/database
+      export: default
+      styles: ./web/styles.css

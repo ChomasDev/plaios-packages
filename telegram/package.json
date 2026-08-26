@@ -1,7 +1,15 @@
 {
   "name": "@agent-os/telegram",
   "version": "0.1.0",
-  "private": true,
+  "description": "Telegram input and output capability for Agent OS",
+  "keywords": [
+    "agent-os",
+    "capability",
+    "telegram",
+    "input",
+    "output"
+  ],
+  "private": false,
   "type": "module",
   "sideEffects": [
     "**/*.css"
