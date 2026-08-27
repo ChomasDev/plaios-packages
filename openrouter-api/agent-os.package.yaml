@@ -1,0 +1,99 @@
+schemaVersion: 1
+id: openrouter-api
+name: OpenAI-compatible API
+version: 0.1.0
+description: OpenAI and OpenRouter-compatible HTTP API with correlated output, SSE, Responses API, and OpenClaw WebSocket protocol v4
+interfaces:
+  - id: openrouter-api.input
+    kind: input
+    name: OpenRouterApiInput
+    entry: .
+    export: .
+    className: OpenRouterApiInput
+    description: Accepts OpenAI-compatible HTTP and OpenClaw WebSocket requests
+    channel: openrouter-api
+    surfaces: [http, network, web]
+    permissions: [network.inbound]
+    required: []
+    config:
+      - key: hostname
+        env: OPENROUTER_API_HOST
+        type: string
+        required: false
+        default: 127.0.0.1
+        description: HTTP listen host
+      - key: port
+        env: OPENROUTER_API_PORT
+        type: number
+        required: false
+        default: 3000
+        description: HTTP and WebSocket listen port
+      - key: apiKey
+        env: OPENROUTER_API_KEY
+        type: secret
+        required: false
+        description: Optional bearer token and OpenClaw gateway credential
+      - key: userId
+        env: AGENT_OS_USER_ID
+        type: string
+        required: false
+        description: Stable fallback user id
+      - key: models
+        env: OPENROUTER_API_MODELS
+        type: string
+        required: false
+        default: agent-os
+        description: Comma-separated model ids advertised by the API
+      - key: openClawCompatibility
+        env: OPENCLAW_HTTP_COMPATIBILITY
+        type: boolean
+        required: false
+        default: false
+        description: Enable OpenClaw model metadata, headers, and WebSocket protocol v4
+      - key: backendModel
+        env: OPENCLAW_BACKEND_MODEL
+        type: string
+        required: false
+        default: agent-os
+        description: Backend model advertised to OpenClaw clients
+      - key: backendProvider
+        env: OPENCLAW_BACKEND_PROVIDER
+        type: string
+        required: false
+        default: agent-os
+        description: Backend provider advertised to OpenClaw clients
+      - key: corsOrigins
+        env: OPENROUTER_API_CORS_ORIGINS
+        type: string
+        required: false
+        default: "*"
+        description: Wildcard or comma-separated allowed browser origins
+      - key: log
+        env: OPENROUTER_API_LOG
+        type: boolean
+        required: false
+        default: true
+        description: Log request lifecycle events
+    startup:
+      when: always
+    web:
+      entry: ./web/input
+      export: default
+      styles: ./web/styles.css
+  - id: openrouter-api.output
+    kind: output
+    name: OpenRouterApiInput
+    entry: .
+    export: .
+    className: OpenRouterApiInput
+    description: Writes the correlated HTTP, SSE, or WebSocket response through the shared API instance
+    channel: openrouter-api
+    surfaces: [http, network, web]
+    permissions: [network.inbound]
+    required: [input]
+    startup:
+      when: always
+    web:
+      entry: ./web/output
+      export: default
+      styles: ./web/styles.css

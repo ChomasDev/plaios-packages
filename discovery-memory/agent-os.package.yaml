@@ -1,0 +1,17 @@
+schemaVersion: 1
+id: discovery-memory
+name: In-Memory Discovery
+version: 0.1.0
+description: In-memory capability registry with deterministic text and tag discovery
+interfaces:
+  - id: discovery-memory.discovery
+    kind: discovery
+    name: InMemoryCapabilityDiscovery
+    entry: .
+    export: .
+    className: InMemoryCapabilityDiscovery
+    description: Registers versioned capabilities and discovers them by exact tokens and tags
+    surfaces: [local]
+    required: []
+    startup: { when: always }
+    web: { entry: ./web/discovery, export: default, styles: ./web/styles.css }

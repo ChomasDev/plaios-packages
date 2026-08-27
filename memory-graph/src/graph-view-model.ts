@@ -1,0 +1,134 @@
+import { MultiGraph } from "graphology";
+
+export interface GraphNodeDto {
+  id: string;
+  type: string;
+  label: string;
+  kind?: string;
+  weight: number;
+  userId?: string;
+  sessionId?: string;
+  createdAt?: string;
+  addedMemoryDate?: string;
+  factDate?: string;
+}
+
+export interface GraphEdgeDto {
+  id: string;
+  sourceId: string;
+  targetId: string;
+  type: string;
+  weight: number;
+}
+
+export interface GraphData {
+  nodes: GraphNodeDto[];
+  edges: GraphEdgeDto[];
+  available: boolean;
+  totalNodes: number;
+  totalEdges: number;
+  nodeLimit: number;
+  actions?: {
+    refresh: () => Promise<GraphData>;
+    forget: (id: string) => Promise<GraphData>;
+    clear: () => Promise<GraphData>;
+    remember: (input: { content: string; userId?: string }) => Promise<GraphData>;
+  };
+}
+
+export interface MemoryNodeAttributes {
+  color: string;
+  fullLabel: string;
+  highlighted?: boolean;
+  label: string;
+  searchable: string;
+  size: number;
+  x: number;
+  y: number;
+}
+
+export interface MemoryEdgeAttributes {
+  color: string;
+  label: string;
+  size: number;
+  weight: number;
+}
+
+export type MemoryGraph = MultiGraph<
+  MemoryNodeAttributes,
+  MemoryEdgeAttributes
+>;
+
+const TYPE_COLORS: Record<string, string> = {
+  memory: "#334155",
+  people: "#f97316",
+  project: "#a855f7",
+  event: "#3b82f6",
+  topic: "#06b6d4",
+  skill: "#22c55e",
+  place: "#eab308",
+  organization: "#ec4899",
+  document: "#f8fafc",
+};
+
+export function buildGraph(
+  nodes: readonly GraphNodeDto[],
+  edges: readonly GraphEdgeDto[],
+): MemoryGraph {
+  const graph = new MultiGraph() as MemoryGraph;
+  const radius = Math.max(20, Math.sqrt(nodes.length) * 5);
+  for (const [index, node] of nodes.entries()) {
+    const angle = index * 2.399963;
+    const distance = radius * Math.sqrt((index + 1) / nodes.length);
+    graph.addNode(node.id, {
+      color: colorFor(node.type),
+      fullLabel: node.type === "memory" ? shorten(node.label, 64) : node.label,
+      label: node.type === "memory" ? "" : node.label,
+      searchable: `${node.label} ${node.type} ${node.id} ${node.addedMemoryDate ?? ""} ${node.factDate ?? ""}`.toLowerCase(),
+      size: sizeFor(node),
+      x: Math.cos(angle) * distance,
+      y: Math.sin(angle) * distance,
+    });
+  }
+  for (const edge of edges) {
+    if (!graph.hasNode(edge.sourceId) || !graph.hasNode(edge.targetId))
+      continue;
+    graph.addEdgeWithKey(edge.id, edge.sourceId, edge.targetId, {
+      color: "#1e293b",
+      label: edge.type,
+      size: Math.max(0.2, Math.min(1.2, edge.weight * 0.55)),
+      weight: Math.max(0.1, edge.weight),
+    });
+  }
+  return graph;
+}
+
+export function nodeById(
+  nodes: readonly GraphNodeDto[],
+  id?: string,
+): GraphNodeDto | undefined {
+  if (!id) return undefined;
+  return nodes.find((node) => node.id === id);
+}
+
+function colorFor(type: string): string {
+  if (TYPE_COLORS[type]) return TYPE_COLORS[type];
+  let hash = 0;
+  for (const character of type) {
+    hash = (hash * 31 + character.charCodeAt(0)) | 0;
+  }
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue} 70% 55%)`;
+}
+
+function sizeFor(node: GraphNodeDto): number {
+  if (node.type === "memory") {
+    return Math.max(1.8, Math.min(4, 1.8 + node.weight * 0.18));
+  }
+  return Math.max(4, Math.min(12, 4 + Math.sqrt(node.weight) * 1.8));
+}
+
+function shorten(value: string, limit: number): string {
+  if (value.length <= limit) return value;
+  return `${value.slice(0, limit - 1)}…`;
+}

@@ -1,7 +1,7 @@
 schemaVersion: 1
 id: sqlite
 name: SQLite
-version: 0.1.1
+version: 0.1.3
 description: Capability-scoped local SQLite database with a full management console
 interfaces:
   - id: sqlite.database
@@ -20,7 +20,7 @@ interfaces:
         type: string
         required: false
         default: .agent-os/agent-os.sqlite
-        description: SQLite database path or :memory:
+        description: "SQLite database path or :memory:"
       - key: enableForeignKeys
         env: AGENT_OS_SQLITE_FOREIGN_KEYS
         type: boolean

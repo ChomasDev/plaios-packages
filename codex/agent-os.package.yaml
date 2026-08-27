@@ -1,0 +1,67 @@
+schemaVersion: 1
+id: codex
+name: Codex
+version: 0.1.0
+description: Codex AI provider with structured tool calling and safe runtime defaults
+interfaces:
+  - id: codex.ai
+    kind: ai
+    name: CodexProvider
+    entry: .
+    export: .
+    className: CodexProvider
+    description: Runs Agent OS model requests through the Codex SDK
+    surfaces: [local, network]
+    permissions: [ai.codex]
+    required: []
+    config:
+      - key: model
+        env: CODEX_MODEL
+        type: string
+        required: false
+        default: gpt-5.6-sol
+        description: Default Codex model id
+      - key: apiKey
+        env: CODEX_API_KEY
+        type: secret
+        required: false
+        description: Optional API key; otherwise the local Codex session is used
+      - key: workingDirectory
+        type: string
+        required: false
+        description: Working directory visible to Codex
+      - key: skipGitRepoCheck
+        type: boolean
+        required: false
+        default: true
+        description: Allow the configured working directory outside a Git repository
+      - key: sandboxMode
+        type: string
+        required: false
+        default: read-only
+        description: Codex sandbox mode
+      - key: approvalPolicy
+        type: string
+        required: false
+        default: never
+        description: Codex approval policy
+      - key: modelReasoningEffort
+        type: string
+        required: false
+        description: Optional model reasoning effort
+      - key: networkAccessEnabled
+        type: boolean
+        required: false
+        default: false
+        description: Allow network access inside workspace-write sandbox
+      - key: webSearchMode
+        type: string
+        required: false
+        default: disabled
+        description: Codex web search mode
+    startup:
+      when: always
+    web:
+      entry: ./web/ai
+      export: default
+      styles: ./web/styles.css

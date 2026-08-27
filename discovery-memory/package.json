@@ -1,0 +1,19 @@
+{
+  "name": "@agent-os/discovery-memory",
+  "version": "0.1.0",
+  "description": "In-memory capability discovery and registry for Agent OS",
+  "keywords": ["agent-os", "capability", "discovery", "registry", "memory"],
+  "private": false,
+  "type": "module",
+  "sideEffects": ["**/*.css"],
+  "files": ["dist", "web", "agent-os.package.yaml", "README.md"],
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": { ".": { "types": "./dist/src/index.d.ts", "import": "./dist/src/index.js" }, "./web/discovery": { "types": "./dist/web/discovery/index.d.ts", "import": "./dist/web/discovery/index.js" }, "./web/styles.css": "./web/styles.css" },
+  "scripts": { "build": "tsc -p tsconfig.json", "test": "pnpm build && node --test test/**/*.test.mjs", "typecheck": "tsc --noEmit -p tsconfig.json" },
+  "dependencies": { "@agent-os/core": "workspace:*", "@agent-os/microfrontend": "workspace:*" },
+  "peerDependencies": { "react": ">=19.0.0" },
+  "devDependencies": { "@types/node": "24.13.3", "@types/react": "^19.0.0", "react": "19.2.4", "typescript": "7.0.2" },
+  "engines": { "node": ">=22.5.0" },
+  "publishConfig": { "access": "public" }
+}

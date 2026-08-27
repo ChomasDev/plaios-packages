@@ -1,0 +1,67 @@
+schemaVersion: 1
+id: env-node
+name: Node Environment
+version: 0.1.0
+description: Process, dotenv, map, and composite environment adapters for Node.js
+interfaces:
+  - id: env-node.process
+    kind: env
+    name: ProcessEnvironment
+    entry: .
+    export: .
+    className: ProcessEnvironment
+    description: Reads from process.env without exposing secret values to the browser
+    surfaces: [local]
+    required: []
+    startup: { when: always }
+    web: { entry: ./web/env, export: default, styles: ./web/styles.css }
+  - id: env-node.dotenv
+    kind: env
+    name: DotenvEnvironment
+    entry: .
+    export: .
+    className: DotenvEnvironment
+    description: Reads and safely manages a project-local .env file
+    surfaces: [local, filesystem]
+    permissions: [filesystem.read, filesystem.write]
+    required: []
+    config:
+      - key: filePath
+        type: string
+        required: false
+        default: .env
+        description: Environment file path relative to the project root
+      - key: exampleFilePath
+        type: string
+        required: false
+        default: .env.example
+        description: Allow-list and documentation source for environment keys
+      - key: required
+        type: boolean
+        required: false
+        default: false
+        description: Fail when the environment file does not exist
+    startup: { when: always }
+    web: { entry: ./web/env, export: default, styles: ./web/styles.css }
+  - id: env-node.map
+    kind: env
+    name: MapEnvironment
+    entry: .
+    export: .
+    className: MapEnvironment
+    description: In-memory key/value environment
+    surfaces: [local]
+    required: []
+    startup: { when: manual }
+    web: { entry: ./web/env, export: default, styles: ./web/styles.css }
+  - id: env-node.composite
+    kind: env
+    name: CompositeEnvironment
+    entry: .
+    export: .
+    className: CompositeEnvironment
+    description: Chains process and dotenv adapters with first-provider precedence
+    surfaces: [local]
+    required: []
+    startup: { when: always }
+    web: { entry: ./web/env, export: default, styles: ./web/styles.css }

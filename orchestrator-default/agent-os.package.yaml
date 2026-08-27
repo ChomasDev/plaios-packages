@@ -1,0 +1,32 @@
+schemaVersion: 1
+id: orchestrator-default
+name: Default Orchestrator
+version: 0.1.0
+description: Model-backed orchestrator that selects capabilities and output channels
+interfaces:
+  - id: orchestrator-default.orchestrator
+    kind: orchestrator
+    name: DefaultOrchestrator
+    entry: .
+    export: .
+    className: DefaultOrchestrator
+    description: Chooses capability ids, primary output, additional outputs, and durable memory proposals
+    surfaces: [local]
+    required: [ai, discovery]
+    config:
+      - key: fastPath
+        type: boolean
+        required: false
+        default: false
+        description: Skip model routing for single-output messages without a deterministic capability match
+      - key: maxCapabilities
+        type: number
+        required: false
+        default: 50
+        description: Maximum capabilities included in one routing decision
+      - key: instructions
+        type: string
+        required: false
+        description: Optional routing instructions replacing the safe defaults
+    startup: { when: always }
+    web: { entry: ./web/orchestrator, export: default, styles: ./web/styles.css }

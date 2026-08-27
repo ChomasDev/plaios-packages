@@ -1,0 +1,38 @@
+schemaVersion: 1
+id: memory-graph
+name: Graph Memory
+version: 0.1.3
+description: Weighted, decaying, vector-ranked property graph memory with an interactive explorer
+interfaces:
+  - id: memory-graph.memory
+    kind: memory
+    name: GraphMemory
+    entry: .
+    export: .
+    className: GraphMemory
+    description: Persists typed entities and relations, then recalls them through semantic ranking and graph traversal
+    surfaces: [filesystem]
+    permissions: [filesystem.read, filesystem.write]
+    required: [database]
+    config:
+      - key: accessBoost
+        type: number
+        required: false
+        default: 0.1
+        description: Weight added each time a memory is recalled
+      - key: halfLifeMs
+        type: number
+        required: false
+        default: 2592000000
+        description: Memory relevance decay half-life in milliseconds
+      - key: traversalDepth
+        type: number
+        required: false
+        default: 2
+        description: Maximum relation traversal depth during recall
+    startup:
+      when: always
+    web:
+      entry: ./web/memory
+      export: default
+      styles: ./web/styles.css

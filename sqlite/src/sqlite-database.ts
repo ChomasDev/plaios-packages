@@ -54,7 +54,21 @@ export class SQLiteDatabaseProvider implements DatabaseProvider {
   }
 
   microfrontendData() {
-    return { databasePath: this.databasePath, admin: this.admin };
+    return {
+      databasePath: this.databasePath,
+      admin: {
+        listTables: () => this.admin.listTables(),
+        describeTable: (table: string) => this.admin.describeTable(table),
+        browseTable: (
+          table: string,
+          options?: { offset?: number; limit?: number },
+        ) => this.admin.browseTable(table, options),
+        execute: (
+          sql: string,
+          options?: import("./admin.js").SQLiteExecuteOptions,
+        ) => this.admin.execute(sql, options),
+      },
+    };
   }
 
   async close(): Promise<void> {
