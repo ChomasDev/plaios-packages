@@ -7,6 +7,25 @@ import {
   MemoryEdgeType,
   MemoryNodeType,
 } from "../src/index.js";
+import { buildThreeGraphData } from "../src/graph-view-model.js";
+
+test("builds a mutation-safe 3D graph model and drops orphaned links", () => {
+  const sourceNodes = [
+    { id: "person", type: "people", label: "Ada", weight: 1 },
+    { id: "project", type: "project", label: "AgentOS", weight: 4 },
+  ];
+  const model = buildThreeGraphData(sourceNodes, [
+    { id: "valid", sourceId: "person", targetId: "project", type: "builds", weight: 0.8 },
+    { id: "orphan", sourceId: "person", targetId: "missing", type: "knows", weight: 0.5 },
+  ]);
+
+  assert.equal(model.nodes.length, 2);
+  assert.equal(model.links.length, 1);
+  assert.equal(model.links[0]?.source, "person");
+  assert.equal(model.links[0]?.target, "project");
+  assert.notEqual(model.nodes[0], sourceNodes[0]);
+  assert.match(model.nodes[0]!.color, /^#/);
+});
 
 test("is a drop-in Memory and creates typed people and hobby nodes", async () => {
   const provider = new SQLiteDatabaseProvider({ databasePath: ":memory:" });

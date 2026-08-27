@@ -21,6 +21,28 @@ export interface GraphEdgeDto {
   weight: number;
 }
 
+export interface ThreeGraphNode extends GraphNodeDto {
+  color: string;
+  searchable: string;
+  val: number;
+  x?: number;
+  y?: number;
+  z?: number;
+}
+
+export interface ThreeGraphLink {
+  id: string;
+  source: string | ThreeGraphNode;
+  target: string | ThreeGraphNode;
+  type: string;
+  weight: number;
+}
+
+export interface ThreeGraphData {
+  nodes: ThreeGraphNode[];
+  links: ThreeGraphLink[];
+}
+
 export interface GraphData {
   nodes: GraphNodeDto[];
   edges: GraphEdgeDto[];
@@ -43,6 +65,7 @@ export interface MemoryNodeAttributes {
   label: string;
   searchable: string;
   size: number;
+  nodeType: string;
   x: number;
   y: number;
 }
@@ -60,7 +83,7 @@ export type MemoryGraph = MultiGraph<
 >;
 
 const TYPE_COLORS: Record<string, string> = {
-  memory: "#334155",
+  memory: "#64748b",
   people: "#f97316",
   project: "#a855f7",
   event: "#3b82f6",
@@ -86,6 +109,7 @@ export function buildGraph(
       label: node.type === "memory" ? "" : node.label,
       searchable: `${node.label} ${node.type} ${node.id} ${node.addedMemoryDate ?? ""} ${node.factDate ?? ""}`.toLowerCase(),
       size: sizeFor(node),
+      nodeType: node.type,
       x: Math.cos(angle) * distance,
       y: Math.sin(angle) * distance,
     });
@@ -94,13 +118,37 @@ export function buildGraph(
     if (!graph.hasNode(edge.sourceId) || !graph.hasNode(edge.targetId))
       continue;
     graph.addEdgeWithKey(edge.id, edge.sourceId, edge.targetId, {
-      color: "#1e293b",
+      color: "rgba(71, 85, 105, 0.28)",
       label: edge.type,
       size: Math.max(0.2, Math.min(1.2, edge.weight * 0.55)),
       weight: Math.max(0.1, edge.weight),
     });
   }
   return graph;
+}
+
+export function buildThreeGraphData(
+  nodes: readonly GraphNodeDto[],
+  edges: readonly GraphEdgeDto[],
+): ThreeGraphData {
+  const nodeIds = new Set(nodes.map(({ id }) => id));
+  return {
+    nodes: nodes.map((node) => ({
+      ...node,
+      color: colorFor(node.type),
+      searchable: `${node.label} ${node.type} ${node.id} ${node.addedMemoryDate ?? ""} ${node.factDate ?? ""}`.toLowerCase(),
+      val: Math.max(1, sizeFor(node) * 0.8),
+    })),
+    links: edges
+      .filter(({ sourceId, targetId }) => nodeIds.has(sourceId) && nodeIds.has(targetId))
+      .map((edge) => ({
+        id: edge.id,
+        source: edge.sourceId,
+        target: edge.targetId,
+        type: edge.type,
+        weight: edge.weight,
+      })),
+  };
 }
 
 export function nodeById(
@@ -123,7 +171,7 @@ function colorFor(type: string): string {
 
 function sizeFor(node: GraphNodeDto): number {
   if (node.type === "memory") {
-    return Math.max(1.8, Math.min(4, 1.8 + node.weight * 0.18));
+    return Math.max(3, Math.min(6, 3 + node.weight * 0.25));
   }
   return Math.max(4, Math.min(12, 4 + Math.sqrt(node.weight) * 1.8));
 }

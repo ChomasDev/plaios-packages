@@ -17,12 +17,16 @@ export function GraphExplorer({
   nodes,
   edges,
   query,
+  hiddenTypes,
+  edgeMode,
   selectedId,
   onSelect,
 }: {
   nodes: GraphNodeDto[];
   edges: GraphEdgeDto[];
   query: string;
+  hiddenTypes: string[];
+  edgeMode: "context" | "all";
   selectedId?: string;
   onSelect: (id?: string) => void;
 }) {
@@ -33,6 +37,7 @@ export function GraphExplorer({
   > | null>(null);
   const layoutRef = useRef<ForceLayout | null>(null);
   const [running, setRunning] = useState(true);
+  const [hoveredId, setHoveredId] = useState<string>();
 
   useEffect(() => {
     const container = containerRef.current;
@@ -42,26 +47,38 @@ export function GraphExplorer({
       allowInvalidContainer: true,
       defaultEdgeColor: "#64748b",
       hideEdgesOnMove: true,
-      labelColor: { color: "#94a3b8" },
-      labelDensity: 0.2,
-      labelRenderedSizeThreshold: 7,
+      labelColor: { color: "#a7b0be" },
+      labelDensity: 0.16,
+      labelFont: "ui-monospace, SFMono-Regular, Menlo, monospace",
+      labelRenderedSizeThreshold: 8,
+      labelSize: 10,
       renderEdgeLabels: false,
-      stagePadding: 42,
+      stagePadding: 64,
       zIndex: true,
     });
     const FA2Layout = FA2LayoutModule as unknown as ForceLayoutConstructor;
     const layout = new FA2Layout(graph, {
       settings: {
         barnesHutOptimize: true,
-        edgeWeightInfluence: 0.35,
-        gravity: 1.2,
+        adjustSizes: true,
+        edgeWeightInfluence: 0.2,
+        gravity: 1.8,
         linLogMode: true,
-        scalingRatio: 12,
-        slowDown: 5,
+        scalingRatio: 18,
+        slowDown: 7,
+        strongGravityMode: true,
       },
     });
     renderer.on("clickNode", ({ node }) => onSelect(node));
     renderer.on("clickStage", () => onSelect());
+    renderer.on("enterNode", ({ node }) => {
+      setHoveredId(node);
+      container.style.cursor = "pointer";
+    });
+    renderer.on("leaveNode", () => {
+      setHoveredId(undefined);
+      container.style.cursor = "default";
+    });
     installNodeDragging(renderer, graph, layout, () => setRunning(true));
     rendererRef.current = renderer;
     layoutRef.current = layout;
@@ -80,8 +97,11 @@ export function GraphExplorer({
     if (!renderer) return;
     const normalized = query.trim().toLowerCase();
     const graph = renderer.getGraph();
+    const disabled = new Set(hiddenTypes);
     const matches = new Set(
-      graph.filterNodes((_, data) => data.searchable.includes(normalized)),
+      graph.filterNodes((_, data) =>
+        !disabled.has(data.nodeType) && data.searchable.includes(normalized),
+      ),
     );
     const labelMatches = new Set(
       [...matches]
@@ -100,22 +120,32 @@ export function GraphExplorer({
     }
     renderer.setSetting("nodeReducer", (node, data) => ({
       ...data,
-      color: node === selectedId ? "#ffffff" : data.color,
-      hidden: Boolean(normalized && !visible.has(node)),
-      highlighted: labelMatches.has(node) || node === selectedId,
+      color: node === selectedId ? "#34d399" : data.color,
+      hidden: disabled.has(data.nodeType) || Boolean(normalized && !visible.has(node)),
+      highlighted: labelMatches.has(node) || node === selectedId || node === hoveredId,
       label:
-        labelMatches.has(node) || node === selectedId
+        labelMatches.has(node) || node === selectedId || node === hoveredId
           ? data.fullLabel
           : data.label,
-      size: node === selectedId ? data.size * 1.6 : data.size,
-      zIndex: node === selectedId ? 2 : 1,
+      size: node === selectedId ? data.size * 1.7 : node === hoveredId ? data.size * 1.3 : data.size,
+      zIndex: node === selectedId || node === hoveredId ? 2 : 1,
     }));
     renderer.setSetting("edgeReducer", (edge, data) => {
       const [source, target] = graph.extremities(edge);
-      const hidden = normalized
-        ? !visible.has(source) || !visible.has(target)
-        : false;
-      return { ...data, hidden };
+      const sourceData = graph.getNodeAttributes(source);
+      const targetData = graph.getNodeAttributes(target);
+      const filtered = disabled.has(sourceData.nodeType) || disabled.has(targetData.nodeType);
+      const outsideSearch = normalized && (!visible.has(source) || !visible.has(target));
+      const focus = selectedId ?? hoveredId;
+      const outsideContext = edgeMode === "context" && (!focus || (source !== focus && target !== focus));
+      const emphasized = Boolean(focus && (source === focus || target === focus));
+      return {
+        ...data,
+        hidden: filtered || Boolean(outsideSearch) || outsideContext,
+        color: emphasized ? "rgba(52, 211, 153, 0.72)" : data.color,
+        size: emphasized ? Math.max(1, data.size * 1.8) : data.size,
+        zIndex: emphasized ? 2 : 0,
+      };
     });
     renderer.refresh();
     if (normalized && matches.size > 0 && matches.size <= 12) {
@@ -133,7 +163,7 @@ export function GraphExplorer({
           { duration: 350 },
         );
     }
-  }, [query, selectedId]);
+  }, [edgeMode, hiddenTypes, hoveredId, query, selectedId]);
 
   function toggleLayout() {
     const layout = layoutRef.current;
@@ -150,15 +180,15 @@ export function GraphExplorer({
   return (
     <div className="graph-explorer relative size-full">
       <div ref={containerRef} className="graph-container size-full" />
-      <div className="absolute right-3 top-3 z-10 flex gap-2">
+      <div className="absolute bottom-3 left-3 z-10 flex gap-1">
         <Control
           label={running ? "Pause gravity" : "Resume gravity"}
           onClick={toggleLayout}
         >
-          {running ? "Ⅱ" : "▶"}
+          {running ? "II" : ">"}
         </Control>
         <Control label="Zoom in" onClick={() => zoom(1.35)}>
-          ＋
+          +
         </Control>
         <Control label="Zoom out" onClick={() => zoom(0.75)}>
           −
@@ -169,7 +199,7 @@ export function GraphExplorer({
             rendererRef.current?.getCamera().animatedReset({ duration: 350 })
           }
         >
-          ↗
+          FIT
         </Control>
       </div>
     </div>

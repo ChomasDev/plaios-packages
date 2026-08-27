@@ -22,7 +22,7 @@ export function GraphStatus({
       <Tag>
         {shownEdges} / {totalEdges} edges
       </Tag>
-      <span className="text-xs text-muted-foreground">
+      <span className="font-mono text-[9px] uppercase tracking-[.08em] text-muted-foreground">
         {limited
           ? `Showing the ${nodeLimit} most recent nodes`
           : "Showing every stored node"}
@@ -31,41 +31,43 @@ export function GraphStatus({
   );
 }
 
-export function NodeDetails({ node, onForget }: { node?: GraphNodeDto; onForget?: (id: string) => void }) {
+export function NodeDetails({ node, connectionCount = 0, onClose, onForget }: { node?: GraphNodeDto; connectionCount?: number; onClose?: () => void; onForget?: (id: string) => void }) {
   if (!node) return null;
   return (
-    <div className="absolute bottom-4 left-4 right-4 z-10 max-w-md rounded-xl border bg-background/95 p-4 shadow-lg backdrop-blur md:right-auto md:w-96">
-      <div className="flex justify-between gap-3">
+    <aside className="graph-inspector absolute bottom-3 right-3 top-3 z-20 w-[min(23rem,calc(100%-1.5rem))] border bg-background/95 shadow-2xl backdrop-blur-xl">
+      <div className="graph-inspector-head flex justify-between gap-3 border-b p-4">
         <div>
-          <p className="font-medium">{node.label}</p>
-          <p className="mt-1 break-all font-mono text-[10px] text-muted-foreground">
-            {node.id}
-          </p>
+          <p className="text-[9px] uppercase tracking-[.16em] text-muted-foreground">Node inspector</p>
+          <p className="mt-2 font-medium leading-5">{node.label}</p>
         </div>
-        <Tag>{node.type}</Tag>
+        <button type="button" onClick={onClose} className="grid size-8 shrink-0 place-items-center border text-xs text-muted-foreground hover:bg-muted">×</button>
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
-        <Field label="Kind" value={node.kind ?? "—"} />
-        <Field label="Weight" value={node.weight.toFixed(2)} />
+      <div className="border-b p-4"><p className="break-all font-mono text-[10px] leading-5 text-muted-foreground">{node.id}</p></div>
+      <div className="grid grid-cols-2 gap-px border-b bg-border text-xs">
+        <InspectorMetric label="Type" value={node.type} />
+        <InspectorMetric label="Connections" value={String(connectionCount)} />
+        <InspectorMetric label="Kind" value={node.kind ?? "—"} />
+        <InspectorMetric label="Weight" value={node.weight.toFixed(3)} />
+      </div>
+      <div className="grid gap-4 p-4 text-xs">
         <Field
-          label="addedMemoryDate"
+          label="Added memory date"
           value={formatDate(node.addedMemoryDate ?? node.createdAt)}
         />
-        <Field label="factDate" value={formatDate(node.factDate)} />
-        <div className="col-span-2">
-          <Field label="Session" value={node.sessionId ?? "global"} />
-        </div>
+        <Field label="Fact date" value={formatDate(node.factDate)} />
+        <Field label="Session" value={node.sessionId ?? "global"} />
+        <Field label="User" value={node.userId ?? "global"} />
       </div>
       {onForget ? (
         <button
           type="button"
           onClick={() => onForget(node.id)}
-          className="mt-4 h-8 border border-destructive/40 px-3 text-xs font-medium text-destructive hover:bg-destructive/10"
+          className="mx-4 mb-4 h-9 border border-destructive/40 px-3 font-mono text-[10px] font-medium uppercase tracking-[.1em] text-destructive hover:bg-destructive/10"
         >
           Forget node
         </button>
       ) : null}
-    </div>
+    </aside>
   );
 }
 
@@ -82,7 +84,7 @@ export function Control({
     <button
       aria-label={label}
       onClick={onClick}
-      className="grid size-9 place-items-center rounded-md border bg-background/90 text-sm shadow-sm backdrop-blur hover:bg-muted"
+      className="grid size-9 place-items-center border bg-background/90 font-mono text-xs shadow-sm backdrop-blur hover:bg-muted"
     >
       {children}
     </button>
@@ -91,7 +93,7 @@ export function Control({
 
 function Tag({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full border bg-muted px-2.5 py-1 text-[10px] font-medium text-muted-foreground">
+    <span className="border bg-muted px-2 py-1 font-mono text-[9px] font-medium uppercase tracking-[.06em] text-muted-foreground">
       {children}
     </span>
   );
@@ -104,6 +106,10 @@ function Field({ label, value }: { label: string; value: string }) {
       <p className="mt-1 truncate font-mono">{value}</p>
     </div>
   );
+}
+
+function InspectorMetric({ label, value }: { label: string; value: string }) {
+  return <div className="min-w-0 bg-background p-3"><p className="text-[8px] uppercase tracking-[.12em] text-muted-foreground">{label}</p><p className="mt-2 truncate font-mono text-xs">{value}</p></div>;
 }
 
 function formatDate(value?: string): string {

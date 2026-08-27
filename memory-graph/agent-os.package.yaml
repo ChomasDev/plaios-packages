@@ -1,7 +1,7 @@
 schemaVersion: 1
 id: memory-graph
 name: Graph Memory
-version: 0.1.3
+version: 0.3.0
 description: Weighted, decaying, vector-ranked property graph memory with an interactive explorer
 interfaces:
   - id: memory-graph.memory

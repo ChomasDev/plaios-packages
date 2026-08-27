@@ -12,9 +12,13 @@ The runtime automatically creates a dedicated SQLite namespace for the memory
 instance, initializes its node, edge, and detail tables, and mounts the package's
 management surface. No database path needs to be repeated in this package.
 
-The management surface is a live WebGL graph console. It can create memories,
-filter and inspect nodes, pause or resume ForceAtlas2 layout, zoom and fit the
-graph, forget individual nodes, refresh storage, and clear the graph.
+The management surface is a live 3D WebGL graph console with orbit, pan, zoom,
+dragging, click-to-focus camera transitions, and a 2D Sigma fallback. Its default
+context mode renders only the relationships around the selected or hovered node,
+avoiding an unreadable full-graph edge cloud while preserving all edges in the
+spatial force simulation. It includes node-type filters, local degree metrics, a
+detailed inspector, full-edge mode, search, layout controls, memory creation,
+refresh, per-node deletion, and protected graph clearing.
 
 From the CLI:
 
