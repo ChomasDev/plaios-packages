@@ -1,6 +1,6 @@
 {
   "name": "@agent-os/orchestrator-default",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Model-backed capability and output router for Agent OS",
   "keywords": ["agent-os", "capability", "orchestrator", "routing", "ai"],
   "private": false,

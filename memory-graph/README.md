@@ -58,3 +58,8 @@ conservative built-in extractor for reliable entity recognition in free text.
 `upsertNode`, `link`, and `neighbors` expose graph operations without changing
 the `Memory` methods used by Agent OS. Node `data` is dynamic JSON, and custom
 node and edge type strings are supported alongside the built-in enums.
+
+The memory instance also registers the `memory_graph_write` agent capability.
+It lets the assistant create or update user-scoped entity nodes and explicit
+relationships when a user asks it to remember how people, places, events, or
+other durable concepts are connected.

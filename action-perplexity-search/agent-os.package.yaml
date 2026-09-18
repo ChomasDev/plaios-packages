@@ -1,0 +1,28 @@
+schemaVersion: 1
+id: perplexity-search
+name: Perplexity Search
+version: 0.1.1
+description: Live web search through the Perplexity Search API
+interfaces:
+  - id: perplexity-search.action
+    kind: action
+    name: PerplexitySearchCapability
+    entry: .
+    export: .
+    className: PerplexitySearchCapability
+    description: Searches the live web and returns ranked sources with snippets and dates
+    surfaces: [network, web]
+    permissions: [network.http, web.search]
+    required: [env]
+    config:
+      - { key: apiKey, env: PERPLEXITY_API_KEY, type: secret, required: true, description: Perplexity API key }
+    capability:
+      id: web.search
+      version: 1.0.0
+      name: search_web
+      description: Search the live web for current events, recent facts, research, and online sources.
+      permissions: [network.http, web.search]
+      tags: [web, search, perplexity, internet, current, latest, research, news]
+      execution: { timeoutMs: 30000, idempotent: true }
+    startup: { when: ifConfigured }
+    web: { entry: ./web/action, export: default, styles: ./web/styles.css }

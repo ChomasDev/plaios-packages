@@ -1,0 +1,51 @@
+schemaVersion: 1
+id: cronjob
+name: Cron Scheduler
+version: 0.1.0
+description: Persistent scheduled prompts with a live input and an agent-manageable capability
+interfaces:
+  - id: cronjob.input
+    kind: input
+    name: CronjobAdapter
+    entry: .
+    export: .
+    className: CronjobAdapter
+    description: Fires persistent scheduled prompts into the agent loop and exposes cronjobs.manage
+    channel: cronjob
+    surfaces: [local, filesystem]
+    permissions: [cronjobs.read, cronjobs.write, filesystem.read, filesystem.write]
+    required: [database]
+    config:
+      - key: defaultTimezone
+        env: CRON_DEFAULT_TIMEZONE
+        type: string
+        required: false
+        default: Europe/Rome
+        description: Default IANA timezone for newly-created schedules
+      - key: preferredOutputChannel
+        env: CRON_OUTPUT_CHANNEL
+        type: string
+        required: false
+        default: telegram
+        description: Preferred output channel for scheduled agent responses
+      - key: maxJobs
+        env: CRON_MAX_JOBS
+        type: number
+        required: false
+        default: 100
+        description: Maximum number of persisted schedules
+      - key: allowSeconds
+        env: CRON_ALLOW_SECONDS
+        type: boolean
+        required: false
+        default: false
+        description: Allow six-field schedules with second-level frequency
+    capability:
+      id: cronjobs.manage
+      version: 1.0.0
+      name: manage_cronjobs
+      description: Add, list, suspend, resume, or remove persistent scheduled prompts.
+      permissions: [cronjobs.read, cronjobs.write]
+      tags: [cron, schedule, automation, reminder]
+    startup: { when: always }
+    web: { entry: ./web/input, export: default, styles: ./web/styles.css }

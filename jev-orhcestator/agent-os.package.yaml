@@ -1,0 +1,24 @@
+schemaVersion: 1
+id: jev-orhcestator
+name: JevOrhcestator
+version: 0.1.0
+description: TypeSafe Jev router that selects capabilities and output channels
+interfaces:
+  - id: jev-orhcestator.orchestrator
+    kind: orchestrator
+    name: JevOrhcestatorOrchestrator
+    entry: .
+    export: .
+    className: JevOrhcestatorOrchestrator
+    description: Chooses capability ids and an output channel with typed Jev judgments
+    required: [discovery]
+    config:
+      - key: maxCapabilities
+        type: number
+        required: false
+        default: 50
+        description: Maximum capabilities included in one routing decision
+    web:
+      entry: ./web/orchestrator
+      export: default
+      styles: ./web/styles.css

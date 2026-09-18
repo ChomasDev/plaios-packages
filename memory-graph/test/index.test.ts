@@ -94,6 +94,69 @@ test("supports custom node types and weighted many-to-many links", async () => {
   await provider.close();
 });
 
+test("exposes a user-scoped capability for writing graph nodes and relationships", async () => {
+  const provider = new SQLiteDatabaseProvider({ databasePath: ":memory:" });
+  const graph = new GraphMemory({ database: provider.scope("capability-write-test") });
+
+  const result = await graph.execute({
+    nodes: [
+      { ref: "valentina", type: "people", label: "Valentina Brisolin", attributes: [{ key: "description", value: "mysterious" }], weight: null, factDate: null },
+      { ref: "alex", type: "people", label: "Alex", attributes: [], weight: null, factDate: null },
+      { ref: "martina", type: "people", label: "Martina", attributes: [], weight: null, factDate: null },
+      { ref: "federico", type: "people", label: "Federico", attributes: [], weight: null, factDate: null },
+    ],
+    edges: [
+      { sourceRef: "valentina", targetRef: "alex", type: "friend-of", weight: null },
+      { sourceRef: "valentina", targetRef: "martina", type: "friend-of", weight: null },
+      { sourceRef: "valentina", targetRef: "federico", type: "friend-of", weight: null },
+    ],
+  }, {
+    runId: "run-1",
+    callId: "call-1",
+    userId: "telegram-user",
+    sessionId: "telegram-chat",
+    startedAt: new Date(),
+    metadata: { channel: "telegram", inputMessageId: "message-1" },
+  });
+
+  assert.equal(result.success, true);
+  if (!result.success) return;
+  assert.equal(result.data.nodes.length, 4);
+  assert.equal(result.data.edges.length, 3);
+  assert.equal(graph.manifest.id, "memory.graph.write");
+
+  const results = await graph.recall({ text: "Valentina Brisolin", userId: "telegram-user", limit: 10 });
+  const valentina = results.find((entry) => entry.id === result.data.nodes[0]?.id);
+  assert.equal(valentina?.metadata?.graphNodeType, MemoryNodeType.Person);
+  assert.equal((valentina?.content as { description?: string }).description, "mysterious");
+  const neighbors = await graph.neighbors(result.data.nodes[0]!.id, 1);
+  assert.deepEqual(new Set(neighbors.map(({ label }) => label)), new Set(["Alex", "Martina", "Federico"]));
+
+  await provider.close();
+});
+
+test("rejects graph-write relationships whose endpoints are not in the request", async () => {
+  const provider = new SQLiteDatabaseProvider({ databasePath: ":memory:" });
+  const graph = new GraphMemory({ database: provider.scope("capability-validation-test") });
+  const result = await graph.execute({
+    nodes: [
+      { ref: "valentina", type: "people", label: "Valentina", attributes: [], weight: null, factDate: null },
+    ],
+    edges: [
+      { sourceRef: "valentina", targetRef: "missing", type: "friend-of", weight: null },
+    ],
+  }, {
+    runId: "run-1",
+    callId: "call-1",
+    userId: "telegram-user",
+    startedAt: new Date(),
+  });
+
+  assert.equal(result.success, false);
+  if (!result.success) assert.equal(result.error.code, "VALIDATION_ERROR");
+  await provider.close();
+});
+
 test("rejects edge weights that traversal cannot consume", async () => {
   const provider = new SQLiteDatabaseProvider({ databasePath: ":memory:" });
   const graph = new GraphMemory({ database: provider.scope("edge-weight-test") });

@@ -23,7 +23,7 @@ export default function GraphMemoryMicrofrontend({
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string>();
   const [hiddenTypes, setHiddenTypes] = useState<string[]>([]);
-  const [edgeMode, setEdgeMode] = useState<EdgeMode>("context");
+  const [edgeMode, setEdgeMode] = useState<EdgeMode>("all");
   const [renderMode, setRenderMode] = useState<RenderMode>("3d");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -41,6 +41,7 @@ export default function GraphMemoryMicrofrontend({
   const connectionCount = selectedId
     ? edges.filter(({ sourceId, targetId }) => sourceId === selectedId || targetId === selectedId).length
     : 0;
+  const visibleEdgeCount = edgeMode === "all" ? edges.length : connectionCount;
 
   const run = useCallback(async (operation: () => Promise<GraphData>) => {
     setBusy(true);
@@ -119,7 +120,7 @@ export default function GraphMemoryMicrofrontend({
           <div className="graph-context-bar">
             <GraphStatus
               shownNodes={visibleNodeCount}
-              shownEdges={edges.length}
+              shownEdges={visibleEdgeCount}
               totalNodes={snapshot?.totalNodes ?? nodes.length}
               totalEdges={snapshot?.totalEdges ?? edges.length}
               nodeLimit={snapshot?.nodeLimit ?? nodes.length}

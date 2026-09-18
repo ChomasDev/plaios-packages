@@ -1,0 +1,42 @@
+schemaVersion: 1
+id: action-cli
+name: CLI Inspector
+version: 0.1.1
+description: Shell-free, allowlisted inspection commands with workspace and secret boundaries
+interfaces:
+  - id: action-cli.action
+    kind: action
+    name: RunCLICommandCapability
+    entry: .
+    export: .
+    className: RunCLICommandCapability
+    description: Runs an allowlisted local inspection command without invoking a shell or forwarding secrets
+    surfaces: [cli, local, filesystem]
+    permissions: [cli.execute, filesystem.read]
+    required: [env]
+    config:
+      - key: allowedCommands
+        type: string
+        required: false
+        default: echo,pwd,ls,whoami,date,find,stat,df,du,free,uname,ps,which,whereis,dpkg-query
+        description: Comma-separated executable allowlist
+      - key: timeoutMs
+        type: number
+        required: false
+        default: 5000
+        description: Per-command timeout
+      - key: maxOutputBytes
+        type: number
+        required: false
+        default: 32768
+        description: Maximum stdout or stderr returned to the model
+    capability:
+      id: cli.run-command
+      version: 1.0.0
+      name: run_cli_command
+      description: Inspect the Agent OS workspace, installed packages, processes, storage, memory, OS, user, and date with safe read-only commands.
+      permissions: [cli.execute, filesystem.read]
+      tags: [cli, command, local, filesystem, packages, processes]
+      execution: { timeoutMs: 5000, idempotent: true }
+    startup: { when: always }
+    web: { entry: ./web/action, export: default, styles: ./web/styles.css }

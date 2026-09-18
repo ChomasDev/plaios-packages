@@ -118,9 +118,9 @@ export function buildGraph(
     if (!graph.hasNode(edge.sourceId) || !graph.hasNode(edge.targetId))
       continue;
     graph.addEdgeWithKey(edge.id, edge.sourceId, edge.targetId, {
-      color: "rgba(71, 85, 105, 0.28)",
+      color: "rgba(100, 116, 139, 0.62)",
       label: edge.type,
-      size: Math.max(0.2, Math.min(1.2, edge.weight * 0.55)),
+      size: Math.max(0.65, Math.min(1.4, edge.weight * 0.9)),
       weight: Math.max(0.1, edge.weight),
     });
   }

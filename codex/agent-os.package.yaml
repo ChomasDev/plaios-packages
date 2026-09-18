@@ -1,8 +1,8 @@
 schemaVersion: 1
 id: codex
 name: Codex
-version: 0.1.0
-description: Codex AI provider with structured tool calling and safe runtime defaults
+version: 0.1.2
+description: Codex AI provider with a persistent app-server, structured tool calling, low-latency successful command completion, and safe runtime defaults
 interfaces:
   - id: codex.ai
     kind: ai
@@ -59,6 +59,11 @@ interfaces:
         required: false
         default: disabled
         description: Codex web search mode
+      - key: persistentProcess
+        type: boolean
+        required: false
+        default: true
+        description: Keep one Codex app-server process warm across requests
     startup:
       when: always
     web:

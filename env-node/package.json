@@ -1,6 +1,6 @@
 {
   "name": "@agent-os/env-node",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "description": "Process, dotenv, map, and composite environment adapters for Agent OS",
   "keywords": ["agent-os", "capability", "environment", "dotenv", "config"],
   "private": false,

@@ -70,11 +70,15 @@ export class DotenvEnvironment extends BaseEnvironment {
   private async updateAllowed(updates: Record<string, string | null>): Promise<void> {
     const variables = this.safeVariables();
     const sources = new Map(variables.map((variable) => [variable.key, variable]));
-    for (const [key, value] of Object.entries(updates)) {
+    for (const [rawKey, value] of Object.entries(updates)) {
+      const key = rawKey.trim();
+      if (!isEnvironmentKey(key)) throw new Error(`Invalid environment variable name: ${rawKey}`);
       const variable = sources.get(key);
-      if (!variable || variable.source === "process") continue;
+      if (variable?.source === "process" || process.env[key] !== undefined) {
+        throw new Error(`${key} is supplied by the process environment and is read-only`);
+      }
       if (value === null) this.values.delete(key);
-      else if (value !== "" || !variable.secret) this.values.set(key, value);
+      else if (value !== "" || !isSecretKey(key)) this.values.set(key, value);
     }
     const output = [...this.values.entries()].map(([key, value]) => `${key}=${quoteEnv(value)}`).join("\n");
     const temporary = `${this.filePath}.agent-os-tmp`;
@@ -126,6 +130,7 @@ export function parseDotenv(contents: string): Map<string, string> {
 function resolveFrom(cwd: string, path: string): string { return isAbsolute(path) ? path : resolve(cwd, path); }
 function normalizeValue(value: string | undefined): string | undefined { return value === undefined || value === "" ? undefined : value; }
 function toEnvironmentRecord(entries: Iterable<readonly [string, string | undefined]>): Record<string, string> { const values: Record<string, string> = {}; for (const [key, raw] of entries) { const value = normalizeValue(raw); if (value !== undefined) values[key] = value; } return values; }
+function isEnvironmentKey(key: string): boolean { return /^[A-Za-z_][A-Za-z0-9_]*$/.test(key); }
 function isSecretKey(key: string): boolean { return /(?:TOKEN|SECRET|PASSWORD|PASS|API_KEY|PRIVATE_KEY|CREDENTIAL|AUTH|COOKIE)/i.test(key); }
 function maskSecret(value: string): string { if (!value) return "Not set"; return value.length <= 4 ? "••••" : `${value.slice(0, 2)}${"•".repeat(Math.min(10, value.length - 4))}${value.slice(-2)}`; }
 function quoteEnv(value: string): string { return /^[A-Za-z0-9_./:@+-]*$/.test(value) ? value : JSON.stringify(value); }

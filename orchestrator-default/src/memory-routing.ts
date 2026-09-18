@@ -1,6 +1,57 @@
 import type { JsonSchema, MemoryProposal } from "@agent-os/core";
 
 const DURABLE_KINDS = ["semantic", "episodic", "procedural"] as const;
-export interface ModelMemoryProposal { kind: string; content: string; reason: string; confidence: number; factDate: string | null; }
-export function createMemoryProposalSchema(): JsonSchema { return { type: "array", maxItems: 3, description: "Explicit durable user facts or preferences from the current request. Empty when nothing should be remembered.", items: { type: "object", properties: { kind: { type: "string", enum: [...DURABLE_KINDS] }, content: { type: "string", description: "Concise standalone fact." }, reason: { type: "string", description: "Why this is useful later." }, confidence: { type: "number", minimum: 0, maximum: 1 }, factDate: { type: ["string", "null"], description: "ISO date-time when explicitly supplied; otherwise null." } }, required: ["kind", "content", "reason", "confidence", "factDate"], additionalProperties: false } }; }
-export function sanitizeMemoryProposals(proposals: readonly ModelMemoryProposal[] | undefined): MemoryProposal[] { const memories: MemoryProposal[] = []; for (const proposal of proposals ?? []) { if (!DURABLE_KINDS.some((kind) => kind === proposal.kind)) continue; const content = proposal.content?.trim(); const reason = proposal.reason?.trim(); if (!content || !reason) continue; const date = proposal.factDate ? new Date(proposal.factDate) : undefined; memories.push({ operation: "remember", kind: proposal.kind as typeof DURABLE_KINDS[number], content: content.slice(0, 1_000), reason: reason.slice(0, 500), confidence: Number.isFinite(proposal.confidence) ? Math.min(1, Math.max(0, proposal.confidence)) : 0.5, ...(date && !Number.isNaN(date.getTime()) ? { factDate: date } : {}) }); if (memories.length === 3) break; } return memories; }
+export interface ModelMemoryProposal {
+  kind: string;
+  content: string;
+  reason: string;
+  confidence: number;
+  factDate: string | null;
+}
+export function createMemoryProposalSchema(): JsonSchema {
+  return {
+    type: "array",
+    maxItems: 3,
+    description:
+      "Explicit durable user facts or preferences from the current request. Empty when nothing should be remembered.",
+    items: {
+      type: "object",
+      properties: {
+        kind: { type: "string", enum: [...DURABLE_KINDS] },
+        content: { type: "string", description: "Concise standalone fact." },
+        reason: { type: "string", description: "Why this is useful later." },
+        confidence: { type: "number", minimum: 0, maximum: 1 },
+        factDate: {
+          type: ["string", "null"],
+          description: "ISO date-time when explicitly supplied; otherwise null.",
+        },
+      },
+      required: ["kind", "content", "reason", "confidence", "factDate"],
+      additionalProperties: false,
+    },
+  };
+}
+export function sanitizeMemoryProposals(
+  proposals: readonly ModelMemoryProposal[] | undefined,
+): MemoryProposal[] {
+  const memories: MemoryProposal[] = [];
+  for (const proposal of proposals ?? []) {
+    if (!DURABLE_KINDS.some((kind) => kind === proposal.kind)) continue;
+    const content = proposal.content?.trim();
+    const reason = proposal.reason?.trim();
+    if (!content || !reason) continue;
+    const date = proposal.factDate ? new Date(proposal.factDate) : undefined;
+    memories.push({
+      operation: "remember",
+      kind: proposal.kind as (typeof DURABLE_KINDS)[number],
+      content: content.slice(0, 1_000),
+      reason: reason.slice(0, 500),
+      confidence: Number.isFinite(proposal.confidence)
+        ? Math.min(1, Math.max(0, proposal.confidence))
+        : 0.5,
+      ...(date && !Number.isNaN(date.getTime()) ? { factDate: date } : {}),
+    });
+    if (memories.length === 3) break;
+  }
+  return memories;
+}

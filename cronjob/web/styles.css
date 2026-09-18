@@ -1,0 +1,52 @@
+@import "@agent-os/microfrontend/styles.css";
+
+@source ".";
+
+.cron-console { display: grid; gap: 1.25rem; }
+.cron-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 1px solid var(--border); background: var(--border); gap: 1px; }
+.cron-metric { min-height: 6rem; padding: 1rem; background: var(--background); }
+.cron-metric p { font-size: .625rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted-foreground); }
+.cron-metric strong { display: block; margin-top: .65rem; font: 500 1.35rem/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.cron-metric strong.live { color: #34d399; }
+.cron-metric strong.error { color: var(--destructive); }
+.cron-grid { display: grid; gap: 1.25rem; }
+.cron-composer { align-self: start; }
+.cron-form { display: grid; gap: 1rem; }
+.cron-field { display: grid; gap: .45rem; }
+.cron-field > span, .cron-eyebrow { font-size: .625rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted-foreground); }
+.cron-field input, .cron-field textarea { width: 100%; border: 1px solid var(--border); background: var(--background); padding: .7rem .8rem; font-size: .8125rem; outline: none; resize: vertical; }
+.cron-field input:focus, .cron-field textarea:focus { border-color: color-mix(in oklch, var(--foreground), transparent 45%); box-shadow: inset 2px 0 #34d399; }
+.cron-form-pair { display: grid; gap: 1rem; }
+.cron-presets { display: flex; flex-wrap: wrap; gap: .4rem; }
+.cron-presets button, .cron-actions button, .cron-section-head > button { border: 1px solid var(--border); padding: .45rem .65rem; color: var(--muted-foreground); font: 500 .625rem/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .06em; }
+.cron-presets button:hover, .cron-actions button:hover, .cron-section-head > button:hover { background: var(--muted); color: var(--foreground); }
+.cron-primary { height: 2.75rem; background: var(--primary); color: var(--primary-foreground); font: 600 .6875rem/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .12em; }
+.cron-primary:disabled { opacity: .45; }
+.cron-section-head { display: flex; align-items: end; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem; }
+.cron-section-head h2 { margin-top: .35rem; font-size: 1.1rem; font-weight: 600; }
+.cron-job-list { display: grid; }
+.cron-job { display: grid; grid-template-columns: 3rem minmax(0, 1fr); border-bottom: 1px solid var(--border); }
+.cron-job-index { border-right: 1px solid var(--border); padding: 1.1rem .7rem; color: var(--muted-foreground); font: .625rem/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.cron-job-main { min-width: 0; padding: 1.1rem; }
+.cron-job-title { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
+.cron-job-title h3 { font-size: .875rem; font-weight: 600; }
+.cron-job-title code { display: block; margin-top: .35rem; color: var(--muted-foreground); font-size: .6875rem; }
+.cron-prompt { margin-top: 1rem; color: var(--foreground); font-size: .75rem; line-height: 1.6; }
+.cron-job-meta { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin-top: 1rem; color: var(--muted-foreground); font: .5625rem/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; }
+.cron-job-meta b { color: var(--foreground); font-weight: 500; }
+.cron-actions { display: flex; gap: .5rem; margin-top: 1rem; }
+.cron-actions .danger { color: var(--destructive); }
+.cron-error { border: 1px solid color-mix(in oklch, var(--destructive), transparent 60%); background: color-mix(in oklch, var(--destructive), transparent 92%); padding: .7rem; color: var(--destructive); font-size: .7rem; }
+.cron-empty { display: grid; min-height: 16rem; place-content: center; text-align: center; color: var(--muted-foreground); }
+.cron-empty span { font: 2.5rem/1 ui-monospace, SFMono-Regular, Menlo, monospace; opacity: .25; }
+.cron-empty p { margin-top: .75rem; font-size: .75rem; }
+.cron-footer-grid { display: grid; gap: 1.25rem; }
+
+@media (min-width: 768px) {
+  .cron-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .cron-form-pair, .cron-footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1280px) {
+  .cron-grid { grid-template-columns: minmax(20rem, 24rem) minmax(0, 1fr); }
+}

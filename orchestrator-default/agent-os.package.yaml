@@ -1,8 +1,8 @@
 schemaVersion: 1
 id: orchestrator-default
 name: Default Orchestrator
-version: 0.1.0
-description: Model-backed orchestrator that selects capabilities and output channels
+version: 0.1.2
+description: Low-latency dynamic capability and output router with optional model routing
 interfaces:
   - id: orchestrator-default.orchestrator
     kind: orchestrator
@@ -18,12 +18,17 @@ interfaces:
         type: boolean
         required: false
         default: false
-        description: Skip model routing for single-output messages without a deterministic capability match
+        description: Skip model routing for all single-output messages and use dynamic capability discovery plus the configured baseline
       - key: maxCapabilities
         type: number
         required: false
         default: 50
         description: Maximum capabilities included in one routing decision
+      - key: minCapabilities
+        type: number
+        required: false
+        default: 30
+        description: Minimum installed capabilities made available to the agent after routing
       - key: instructions
         type: string
         required: false

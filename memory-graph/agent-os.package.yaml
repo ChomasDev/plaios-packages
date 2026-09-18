@@ -1,7 +1,7 @@
 schemaVersion: 1
 id: memory-graph
 name: Graph Memory
-version: 0.3.0
+version: 0.4.3
 description: Weighted, decaying, vector-ranked property graph memory with an interactive explorer
 interfaces:
   - id: memory-graph.memory
@@ -14,6 +14,14 @@ interfaces:
     surfaces: [filesystem]
     permissions: [filesystem.read, filesystem.write]
     required: [database]
+    capability:
+      id: memory.graph.write
+      version: 1.0.0
+      name: memory_graph_write
+      description: Create or update durable graph-memory entities and explicit relationships.
+      permissions: [memory.write]
+      tags: [memory, graph, write, remember, node, relationship]
+      execution: { timeoutMs: 10000, idempotent: true }
     config:
       - key: accessBoost
         type: number

@@ -1,0 +1,29 @@
+schemaVersion: 1
+id: memory-retrieval
+name: Memory Retrieval
+version: 0.1.1
+description: Focused follow-up retrieval against the active graph memory
+interfaces:
+  - id: memory-retrieval.action
+    kind: action
+    name: MemoryRetrievalCapability
+    entry: .
+    export: .
+    className: MemoryRetrievalCapability
+    description: Searches durable memories during an agent response when initial context is incomplete
+    surfaces: [local]
+    permissions: [memory.read]
+    required: [memory]
+    config:
+      - { key: defaultLimit, type: number, required: false, default: 20, description: Default results per focused search }
+      - { key: maxLimit, type: number, required: false, default: 50, description: Maximum results per search }
+    capability:
+      id: memory.retrieval
+      version: 1.0.0
+      name: memory_retrieval
+      description: Search persistent graph memory with a focused follow-up query during the current response.
+      permissions: [memory.read]
+      tags: [memory, retrieval, graph, search]
+      execution: { timeoutMs: 10000, idempotent: true }
+    startup: { when: always }
+    web: { entry: ./web/action, export: default, styles: ./web/styles.css }

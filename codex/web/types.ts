@@ -8,4 +8,5 @@ export interface CodexProviderData {
   networkAccessEnabled: boolean;
   webSearchMode: string;
   modelReasoningEffort?: string;
+  persistentProcess: boolean;
 }
