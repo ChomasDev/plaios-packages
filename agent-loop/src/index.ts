@@ -64,6 +64,8 @@ export class DefaultAgentLoop implements AgentLoop {
 
     // Orchestrator owns discovery/selection; the loop only loads by ID.
     if (options.bypassModel) {
+      const confirmation = protocolConfirmation(message, options);
+      if (confirmation) return { type: "text", text: confirmation };
       return this.runDirect(runId, message, options);
     }
 
@@ -184,6 +186,7 @@ export class DefaultAgentLoop implements AgentLoop {
     });
 
     const summaries: string[] = [];
+    const images: Array<{ path: string; mediaType: string }> = [];
     for (const capability of capabilities) {
       const callId = `direct-${capability.manifest.id}`;
       await emit(options, {
@@ -221,6 +224,8 @@ export class DefaultAgentLoop implements AgentLoop {
           result,
         });
         summaries.push(summarizeCapabilityResult(result));
+        const image = imageFromCapabilityResult(result);
+        if (image) images.push(image);
       } catch (error) {
         const messageText = error instanceof Error ? error.message : String(error);
         await emit(options, {
@@ -235,10 +240,28 @@ export class DefaultAgentLoop implements AgentLoop {
       }
     }
 
-    return {
-      type: "text",
-      text: summaries.filter(Boolean).join("\n") || "Done.",
-    };
+    const text = summaries.filter(Boolean).join("\n") || "Done.";
+    if (images.length > 0 && wantsVisualReport(message)) {
+      await emit(options, {
+        type: "model.started",
+        runId,
+        at: new Date(),
+        capabilities: [],
+      });
+      return this.model.processInput(
+        {
+          text: visualReportPrompt(message, text),
+          images,
+        },
+        {
+          stream: options.stream,
+          signal: options.signal,
+          instructions: this.instructions,
+        },
+      );
+    }
+
+    return { type: "text", text };
   }
 
   private async loadCapabilities(
@@ -283,6 +306,57 @@ function compactHistory(value: unknown): Array<{ role: string; content: string }
     const content = "content" in entry && typeof entry.content === "string" ? entry.content : "";
     return role && content ? [{ role, content }] : [];
   });
+}
+
+function protocolConfirmation(
+  message: InputMessage,
+  options: AgentLoopOptions,
+): string | undefined {
+  if ((options.capabilityIds?.length ?? 0) > 0) return undefined;
+  const text = message.metadata?.protocolConfirmation;
+  return typeof text === "string" && text.trim() ? text.trim() : undefined;
+}
+
+function imageFromCapabilityResult(result: {
+  success: boolean;
+  data?: unknown;
+}): { path: string; mediaType: string } | undefined {
+  if (!result.success || !result.data || typeof result.data !== "object") return undefined;
+  const path = "localPath" in result.data && typeof result.data.localPath === "string"
+    ? result.data.localPath
+    : "";
+  if (!path || !/\.(png|jpe?g|webp|gif)$/i.test(path)) return undefined;
+  return { path, mediaType: mediaTypeForPath(path) };
+}
+
+function mediaTypeForPath(path: string): string {
+  if (/\.jpe?g$/i.test(path)) return "image/jpeg";
+  if (/\.webp$/i.test(path)) return "image/webp";
+  if (/\.gif$/i.test(path)) return "image/gif";
+  return "image/png";
+}
+
+function wantsVisualReport(message: InputMessage): boolean {
+  const text =
+    typeof message.metadata?.originalText === "string" && message.metadata.originalText.trim()
+      ? message.metadata.originalText
+      : message.text;
+  return /\b(telegram|cosa vedi|che vedi|descrivi|descrizione|scrivimi|scrivermi|mandami|mandarmi|dimmi)\b/i.test(
+    text,
+  );
+}
+
+function visualReportPrompt(message: InputMessage, summary: string): string {
+  const text =
+    typeof message.metadata?.originalText === "string" && message.metadata.originalText.trim()
+      ? message.metadata.originalText
+      : message.text;
+  return [
+    `The user said: "${text}"`,
+    summary,
+    "A screenshot was captured. Describe clearly what you see on the screen, in the user's language.",
+    "Be specific about apps, windows, text, and layout. Do not mention file paths unless useful.",
+  ].join("\n");
 }
 
 function toModelInput(message: InputMessage): AIInput {

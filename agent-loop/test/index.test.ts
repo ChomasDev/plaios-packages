@@ -162,6 +162,123 @@ test("bypassModel executes the capability with raw text and skips the generative
   });
 });
 
+test("returns a protocol confirmation without calling a capability", async () => {
+  let modelCalls = 0;
+  const loop = new DefaultAgentLoop({
+    model: {
+      provider: "test",
+      model: "test",
+      settings: {},
+      async processWithFunctions() {
+        modelCalls += 1;
+        return { type: "text" as const, text: "model" };
+      },
+      async processInput() {
+        modelCalls += 1;
+        return { type: "text" as const, text: "model" };
+      },
+      async functionCall() {
+        throw new Error("not used");
+      },
+    } as AIProvider,
+    capabilityDiscovery: {
+      async register() {},
+      async get() { return undefined; },
+      async discover() { return []; },
+    },
+    alwaysCapabilityIds: [],
+  });
+
+  const result = await loop.run(
+    {
+      id: "input-4",
+      channel: "web",
+      sessionId: "session-1",
+      text: 'ricorda che quando dico "protocollo ragazza in casa" devi impostare le luci rosse',
+      createdAt: new Date(),
+      metadata: {
+        protocolConfirmation: 'Ok, quando dici "protocollo ragazza in casa" eseguo: imposta le luci del ufficio rosse.',
+      },
+    },
+    { capabilityIds: [], stream: false, bypassModel: true },
+  );
+
+  assert.equal(modelCalls, 0);
+  assert.equal(result.type, "text");
+  assert.match(result.text, /protocollo ragazza in casa/);
+});
+
+test("after a screenshot, describes the image when the user asked what it sees", async () => {
+  let modelInput: AIInput | undefined;
+  const ssh: Capability = {
+    manifest: {
+      id: "ssh.jev",
+      name: "control_remote_computer_jev",
+      description: "Natural-language remote computer control",
+      inputSchema: { type: "object" },
+    },
+    async execute() {
+      return {
+        success: true,
+        data: {
+          summary: "Captured a screenshot on Mac di Thomas.",
+          localPath: "/tmp/agent-os-screenshot.png",
+        },
+      };
+    },
+  };
+  const loop = new DefaultAgentLoop({
+    model: {
+      provider: "test",
+      model: "test",
+      settings: {},
+      async processWithFunctions() {
+        throw new Error("processWithFunctions should not run");
+      },
+      async processInput(input) {
+        modelInput = input;
+        return { type: "text" as const, text: "Vedo Cursor aperto su un file TypeScript." };
+      },
+      async functionCall() {
+        throw new Error("not used");
+      },
+    } as AIProvider,
+    capabilityDiscovery: {
+      async register() {},
+      async get(id) {
+        return id === "ssh.jev" ? ssh : undefined;
+      },
+      async discover() {
+        return [];
+      },
+    },
+    alwaysCapabilityIds: [],
+  });
+
+  const result = await loop.run(
+    {
+      id: "input-5",
+      channel: "openrouter-api",
+      sessionId: "session-1",
+      text: "Riesce a fare uno screenshot del Mac e scrivermi su Telegram cosa vedi?",
+      createdAt: new Date(),
+    },
+    { capabilityIds: ["ssh.jev"], stream: false, bypassModel: true },
+  );
+
+  assert.deepEqual(modelInput, {
+    text: [
+      'The user said: "Riesce a fare uno screenshot del Mac e scrivermi su Telegram cosa vedi?"',
+      "Captured a screenshot on Mac di Thomas.",
+      "A screenshot was captured. Describe clearly what you see on the screen, in the user's language.",
+      "Be specific about apps, windows, text, and layout. Do not mention file paths unless useful.",
+    ].join("\n"),
+    images: [{ path: "/tmp/agent-os-screenshot.png", mediaType: "image/png" }],
+  });
+  assert.equal(result.type, "text");
+  assert.match(result.text, /Cursor/);
+});
+
 const memoryManifest: CapabilityManifest = {
   id: "memory.retrieval",
   name: "memory_retrieval",

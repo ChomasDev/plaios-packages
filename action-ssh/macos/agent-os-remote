@@ -1,0 +1,123 @@
+#!/bin/zsh
+set -euo pipefail
+export PATH="/usr/bin:/bin:/usr/sbin:/sbin"
+
+command="${1:-status}"
+shift || true
+
+remote_dir="$HOME/.agent-os-remote"
+agent_label="ai.agentos.remote.screenshot"
+agent_bin="$remote_dir/bin/agent-os-screenshot-agent"
+agent_plist="$HOME/Library/LaunchAgents/${agent_label}.plist"
+
+ensure_screenshot_agent() {
+  /bin/mkdir -p "$remote_dir/bin" "$HOME/Library/LaunchAgents"
+  /bin/cat > "$agent_bin" <<'AGENT'
+#!/bin/zsh
+export PATH="/usr/bin:/bin:/usr/sbin:/sbin"
+dir="$HOME/.agent-os-remote"
+/bin/mkdir -p "$dir"
+while true; do
+  req="$dir/screenshot.req"
+  if [[ -f "$req" ]]; then
+    dest="$(/bin/cat "$req")"
+    /bin/rm -f "$req" "$dir/screenshot.ok" "$dir/screenshot.err"
+    if /usr/sbin/screencapture -x "$dest"; then
+      /usr/bin/touch "$dir/screenshot.ok"
+    else
+      print -r -- "Screen capture is blocked. On the Mac open System Settings → Privacy & Security → Screen Recording and enable sshd-keygen-wrapper, then retry." > "$dir/screenshot.err"
+    fi
+  fi
+  /bin/sleep 0.25
+done
+AGENT
+  /bin/chmod 755 "$agent_bin"
+  /bin/cat > "$agent_plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>${agent_label}</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>${agent_bin}</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+</dict>
+</plist>
+PLIST
+  local uid
+  uid="$(/usr/bin/stat -f %u /dev/console 2>/dev/null || /usr/bin/id -u)"
+  if ! /bin/launchctl print "gui/${uid}/${agent_label}" >/dev/null 2>&1; then
+    /bin/launchctl bootstrap "gui/${uid}" "$agent_plist" 2>/dev/null || \
+      /bin/launchctl load -w "$agent_plist" 2>/dev/null || true
+  fi
+}
+
+capture_screen() {
+  local output="$1"
+  if /usr/sbin/screencapture -x "$output"; then
+    return 0
+  fi
+  ensure_screenshot_agent
+  /bin/rm -f "$remote_dir/screenshot.ok" "$remote_dir/screenshot.err"
+  print -r -- "$output" > "$remote_dir/screenshot.req"
+  local _i
+  for _i in {1..40}; do
+    if [[ -f "$remote_dir/screenshot.ok" ]]; then
+      return 0
+    fi
+    if [[ -f "$remote_dir/screenshot.err" ]]; then
+      /bin/cat "$remote_dir/screenshot.err" >&2
+      return 1
+    fi
+    /bin/sleep 0.25
+  done
+  print -u2 "Screen capture is blocked. On the Mac open System Settings → Privacy & Security → Screen Recording and enable sshd-keygen-wrapper, then retry."
+  return 1
+}
+
+case "$command" in
+  status)
+    print -- "name=$(/usr/sbin/scutil --get ComputerName 2>/dev/null || /bin/hostname)"
+    print -- "user=$(/usr/bin/id -un)"
+    print -- "host=$(/bin/hostname)"
+    print -- "os=$(/usr/bin/sw_vers -productVersion 2>/dev/null || echo unknown)"
+    /usr/bin/uptime
+    ;;
+  open)
+    /usr/bin/open -a "${1:?app name required}"
+    ;;
+  quit)
+    /usr/bin/osascript -e "tell application \"${1:?app name required}\" to quit"
+    ;;
+  notify)
+    /usr/bin/osascript -e "display notification \"${1:-Agent OS}\" with title \"Agent OS\""
+    ;;
+  lock|sleep-display)
+    /usr/bin/pmset displaysleepnow
+    ;;
+  wake)
+    /usr/bin/caffeinate -u -t 2
+    ;;
+  volume)
+    /usr/bin/osascript -e "set volume output volume ${1:?volume 0-100 required}"
+    ;;
+  say)
+    /usr/bin/say "${1:?text required}"
+    ;;
+  screenshot)
+    output="${1:-/tmp/agent-os-screenshot.png}"
+    capture_screen "$output"
+    print -- "$output"
+    ;;
+  *)
+    print -u2 "Usage: agent-os-remote status|open|quit|notify|lock|wake|volume|say|screenshot"
+    exit 1
+    ;;
+esac

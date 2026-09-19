@@ -117,7 +117,7 @@ export class CodexProvider implements AIProvider {
         yield requested.text!;
         return;
       }
-      prompt = `Agent OS executed "${definition.name}".\n\nCapability result:\n${serialize(output)}\n\nContinue the original request. Call another capability if needed, otherwise return the final answer.`;
+      prompt = createCapabilityFollowUp(definition.name, output);
     }
     throw new Error(`Codex exceeded the ${maxSteps}-step function-call limit`);
   }
@@ -139,7 +139,29 @@ export function createCodexInput(input: AIInput, instructions?: string, taskInst
 }
 
 function requireImagePath(value: string): string { const path = value.trim(); if (!path) throw new Error("AI image path is required"); return path; }
-function createFunctionInstructions(definitions: readonly AIExecutableFunctionDefinition[]): string { return ["Choose whether to call one Agent OS capability or return the final answer.", "For a function call, set type to function-call and provide its exact name and arguments.", "Set finishOnSuccess to true only for one unambiguous state-changing command when no result data, follow-up capability, delay, or additional action is needed. In that case, write a short natural confirmation in the user's language in text; it will be sent only after the capability reports success.", "For reads, questions, uncertain targets, delayed or multi-step requests, set finishOnSuccess to false and text to null so you can inspect the capability result.", "For a final answer, set type to text, name to an empty string, arguments to null, finishOnSuccess to false, and provide text.", "Available Agent OS capabilities:", serialize(definitions.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })))].join("\n"); }
+
+export function createCapabilityFollowUp(name: string, output: unknown): CodexInput {
+  const text = [
+    `Agent OS executed "${name}".`,
+    "",
+    "Capability result:",
+    serialize(output),
+    "",
+    "Continue the original request. If the result includes a screenshot or localPath image, look at the image before answering.",
+    "Call another capability if another step is still needed, otherwise return the final answer.",
+  ].join("\n");
+  const images = imagesFromCapabilityOutput(output);
+  return images.length > 0 ? [{ type: "text", text }, ...images] : text;
+}
+
+function imagesFromCapabilityOutput(output: unknown): Array<{ type: "local_image"; path: string }> {
+  if (!isRecord(output) || !isRecord(output.data)) return [];
+  const path = typeof output.data.localPath === "string" ? output.data.localPath.trim() : "";
+  if (!path || !/\.(png|jpe?g|webp|gif)$/i.test(path)) return [];
+  return [{ type: "local_image", path }];
+}
+
+function createFunctionInstructions(definitions: readonly AIExecutableFunctionDefinition[]): string { return ["Choose whether to call one Agent OS capability or return the final answer.", "For a function call, set type to function-call and provide its exact name and arguments.", "Set finishOnSuccess to true only for one unambiguous state-changing command when no result data, follow-up capability, delay, or additional action is needed. In that case, write a short natural confirmation in the user's language in text; it will be sent only after the capability reports success.", "For reads, questions, uncertain targets, delayed, visual, or multi-step requests, set finishOnSuccess to false and text to null so you can inspect the capability result, including any screenshot.", "If a capability returns a screenshot or localPath image, look at that image before describing what you see.", "For a final answer, set type to text, name to an empty string, arguments to null, finishOnSuccess to false, and provide text.", "Available Agent OS capabilities:", serialize(definitions.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })))].join("\n"); }
 
 function createFunctionStepSchema(definitions: readonly AIExecutableFunctionDefinition[]) {
   return { type: "object", properties: { type: { type: "string", enum: ["text", "function-call"] }, name: { type: "string", enum: ["", ...definitions.map(({ name }) => name)] }, arguments: { anyOf: [{ type: "null" }, ...definitions.map(({ inputSchema }) => normalizeCodexOutputSchema(inputSchema))] }, text: { type: ["string", "null"] }, finishOnSuccess: { type: "boolean" } }, required: ["type", "name", "arguments", "text", "finishOnSuccess"], additionalProperties: false } as const;

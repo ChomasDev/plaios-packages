@@ -14,14 +14,14 @@ import { GraphRetriever } from "./graph-retriever.js";
 import { GraphStore } from "./graph-store.js";
 import { GraphWriter } from "./graph-writer.js";
 import { HashEmbeddingProvider } from "./hash-embedding.js";
-import { toMemoryEntry } from "./node-mapper.js";
+import { toGraphNode, toMemoryEntry } from "./node-mapper.js";
 import {
   resolveGraphOptions,
   type GraphMemoryOptions,
   type ResolvedGraphOptions,
 } from "./options.js";
 import type { GraphData } from "./graph-view-model.js";
-import type { GraphEdge, GraphNode } from "./types.js";
+import type { GraphEdge, GraphNode, NodeType } from "./types.js";
 
 export interface GraphWriteInput {
   nodes: Array<{
@@ -50,7 +50,7 @@ const graphWriteManifest: CapabilityManifest = {
   version: "1.0.0",
   name: "memory_graph_write",
   description:
-    "Create or update durable graph-memory entities and explicit relationships. Use this whenever the user asks you to remember a person, place, event, topic, or how named entities are connected. Include every endpoint in nodes and refer to it from edges by ref. Reusing the same type and label updates the existing user-scoped node instead of duplicating it.",
+    "Create or update durable graph-memory entities and explicit relationships. Use this whenever the user asks you to remember a person, place, event, topic, protocol, or how named entities are connected. Include every endpoint in nodes and refer to it from edges by ref. Reusing the same type and label updates the existing user-scoped node instead of duplicating it.",
   inputSchema: {
     type: "object",
     properties: {
@@ -67,7 +67,7 @@ const graphWriteManifest: CapabilityManifest = {
             },
             type: {
               type: "string",
-              description: "Entity type such as people, place, event, topic, project, or organization.",
+              description: "Entity type such as people, place, event, topic, project, organization, or protocol.",
             },
             label: { type: "string", description: "Canonical entity name." },
             attributes: {
@@ -252,6 +252,17 @@ export class GraphMemory implements Memory, Capability<GraphWriteInput, GraphWri
   ): Promise<readonly GraphNode[]> {
     await this.ready;
     return this.navigator.neighbors(id, depth);
+  }
+
+  async listNodes(query: { type?: NodeType; userId?: string } = {}): Promise<readonly GraphNode[]> {
+    await this.ready;
+    const now = this.config.clock();
+    const nodes = await this.store.nodes();
+    return nodes
+      .filter((node) =>
+        (!query.type || node.type === query.type) &&
+        (!query.userId || node.userId === query.userId))
+      .map((node) => toGraphNode(node, this.retriever.weight(node, now)));
   }
 
   async execute(

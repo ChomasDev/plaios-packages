@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createCodexInput, normalizeCodexOutputSchema, shouldFinishAfterCapability } from "../dist/src/index.js";
+import { createCapabilityFollowUp, createCodexInput, normalizeCodexOutputSchema, shouldFinishAfterCapability } from "../dist/src/index.js";
+
+test("attaches a screenshot from a capability result so the model can see it", () => {
+  const followUp = createCapabilityFollowUp("control_remote_computer_jev", {
+    success: true,
+    data: { summary: "Captured a screenshot.", localPath: "/tmp/agent-os-screenshot.png" },
+  });
+  assert.notEqual(typeof followUp, "string");
+  assert.equal(followUp[1].type, "local_image");
+  assert.equal(followUp[1].path, "/tmp/agent-os-screenshot.png");
+});
 
 test("maps Agent OS images to Codex local images", () => {
   const input = createCodexInput({ text: "What is here?", images: [{ path: "/tmp/photo.jpg", mediaType: "image/jpeg" }] }, "Be concise.");

@@ -1,0 +1,130 @@
+schemaVersion: 1
+id: action-ssh
+name: Remote Computers
+version: 0.1.7
+description: Pair and control Macs and Linux computers over SSH, including natural-language Jev commands
+interfaces:
+  - id: ssh.control
+    kind: action
+    name: SshCapability
+    entry: .
+    export: .
+    className: SshCapability
+    description: Structured SSH control for paired computers
+    surfaces: [network, web, desktop]
+    permissions: [network.ssh, remote.control]
+    required: [env]
+    config:
+      - key: devices
+        env: SSH_DEVICES
+        type: string
+        required: false
+        description: JSON array of {id,name,host,user,port,os,privateKeyPath,privateKey}
+      - key: host
+        env: SSH_HOST
+        type: string
+        required: false
+        description: Hostname or IP of a single default computer
+      - key: user
+        env: SSH_USER
+        type: string
+        required: false
+        description: SSH username of the default computer
+      - key: port
+        env: SSH_PORT
+        type: number
+        required: false
+        default: 22
+        description: SSH port
+      - key: privateKeyPath
+        env: SSH_PRIVATE_KEY_PATH
+        type: string
+        required: false
+        description: Path to the private key used by the server to reach the computer
+      - key: privateKey
+        env: SSH_PRIVATE_KEY
+        type: secret
+        required: false
+        description: PEM/OpenSSH private key contents when a file path is not used
+      - key: timeoutMs
+        type: number
+        required: false
+        default: 15000
+        description: SSH command timeout
+      - key: maxOutputBytes
+        type: number
+        required: false
+        default: 65536
+        description: Maximum command output returned to the agent
+    capability:
+      id: ssh.control
+      version: 1.0.0
+      name: control_remote_computer
+      description: Control paired computers over SSH
+      permissions: [network.ssh, remote.control]
+      tags: [ssh, macos, mac, computer, remote, desktop]
+      execution: { timeoutMs: 20000, idempotent: false }
+    startup: { when: ifConfigured }
+    web: { entry: ./web/action, export: default, styles: ./web/styles.css }
+  - id: ssh.jev
+    kind: action
+    name: SshJevCapability
+    entry: .
+    export: .
+    className: SshJevCapability
+    description: Natural-language remote computer control with TypeSafe Jev
+    surfaces: [network, web, desktop]
+    permissions: [network.ssh, remote.control]
+    required: [env]
+    config:
+      - key: devices
+        env: SSH_DEVICES
+        type: string
+        required: false
+        description: JSON array of {id,name,host,user,port,os,privateKeyPath,privateKey}
+      - key: host
+        env: SSH_HOST
+        type: string
+        required: false
+        description: Hostname or IP of a single default computer
+      - key: user
+        env: SSH_USER
+        type: string
+        required: false
+        description: SSH username of the default computer
+      - key: port
+        env: SSH_PORT
+        type: number
+        required: false
+        default: 22
+        description: SSH port
+      - key: privateKeyPath
+        env: SSH_PRIVATE_KEY_PATH
+        type: string
+        required: false
+        description: Path to the private key used by the server to reach the computer
+      - key: privateKey
+        env: SSH_PRIVATE_KEY
+        type: secret
+        required: false
+        description: PEM/OpenSSH private key contents when a file path is not used
+      - key: timeoutMs
+        type: number
+        required: false
+        default: 15000
+        description: SSH command timeout
+      - key: apiKey
+        env: JEV_API_KEY
+        type: secret
+        required: false
+        description: TypeSafe Jev API key used to interpret the natural-language command
+    capability:
+      id: ssh.jev
+      version: 1.0.0
+      name: control_remote_computer_jev
+      description: Takes a natural-language request and controls a paired computer over SSH
+      permissions: [network.ssh, remote.control]
+      tags: [direct, ssh, macos, mac, computer, remote, safari, apri, chiudi, schermo, volume]
+      execution: { timeoutMs: 25000, idempotent: false }
+    startup: { when: ifConfigured }
+    web: { entry: ./web/action, export: default, styles: ./web/styles.css }

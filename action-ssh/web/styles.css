@@ -1,0 +1,23 @@
+@import "@agent-os/microfrontend/styles.css";
+
+@source ".";
+
+.ssh-stack { display: grid; gap: 1.25rem; }
+.ssh-overview { display: grid; gap: 1.25rem; border: 1px solid var(--border); background: linear-gradient(120deg, color-mix(in oklab, var(--primary) 8%, var(--card)), var(--card) 60%); padding: 1.5rem; }
+.ssh-overview h2 { margin-top: 1rem; font-size: clamp(1.6rem, 3vw, 2.3rem); font-weight: 650; letter-spacing: -.04em; }
+.ssh-overview p { margin-top: .5rem; max-width: 38rem; color: var(--muted-foreground); font-size: .85rem; line-height: 1.55; }
+.ssh-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--border); }
+.ssh-metrics > div { display: grid; gap: .3rem; background: color-mix(in oklab, var(--background) 88%, transparent); padding: 1rem; }
+.ssh-metrics strong { font-family: var(--font-code); font-size: 1.4rem; }
+.ssh-metrics span { font-size: .55rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted-foreground); }
+.ssh-error, .ssh-empty { border: 1px solid var(--border); padding: 1rem; color: var(--muted-foreground); }
+.ssh-error { color: var(--destructive); }
+.ssh-summary { font-size: .85rem; }
+.ssh-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr)); gap: .75rem; }
+.ssh-device { display: grid; gap: 1rem; border: 1px solid var(--border); background: var(--card); padding: 1rem; }
+.ssh-device h3 { font-size: .85rem; font-weight: 650; }
+.ssh-device p { margin-top: .25rem; font-family: var(--font-code); font-size: .6rem; color: var(--muted-foreground); }
+.ssh-device header { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; }
+.ssh-device-actions { display: flex; gap: .5rem; }
+.ssh-device-actions button { height: 2.25rem; flex: 1; border: 1px solid var(--border); font-family: var(--font-code); font-size: .62rem; letter-spacing: .08em; text-transform: uppercase; }
+.ssh-device-actions button:disabled { opacity: .45; }

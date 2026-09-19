@@ -1,6 +1,6 @@
 {
   "name": "@agent-os/memory-graph",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "Weighted, decaying, vector-ranked graph memory capability for Agent OS",
   "keywords": [
     "agent-os",

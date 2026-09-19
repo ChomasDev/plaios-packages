@@ -30,6 +30,52 @@ function mockFetch(answers) {
     );
 }
 
+test("sends the reply to Telegram when the user asks for it", async () => {
+  const orchestrator = new JevOrhcestatorOrchestrator({
+    apiKey: "test",
+    fetch: mockFetch({
+      output: {
+        type: "choice",
+        choice: "openrouter-api",
+        probabilities: { "openrouter-api": 0.8, telegram: 0.2 },
+        confidence: 0.7,
+      },
+      memory: { type: "noul", noul: 0.1 },
+      "cap:ssh.jev": { type: "noul", noul: 0.95 },
+    }),
+    capabilityDiscovery: {
+      async discover() {
+        return [{
+          id: "ssh.jev",
+          name: "control_remote_computer_jev",
+          description: "Natural-language remote computer control",
+          inputSchema: { type: "object" },
+          tags: ["direct", "ssh"],
+        }];
+      },
+    },
+  });
+
+  const decision = await orchestrator.orchestrate(
+    {
+      id: "1",
+      channel: "openrouter-api",
+      text: "Riesce a fare uno screenshot del Mac e scrivermi su Telegram cosa vedi?",
+      createdAt: new Date(),
+    },
+    [
+      { channel: "openrouter-api", async write() {} },
+      { channel: "telegram", async write() {} },
+    ],
+  );
+
+  assert.equal(decision.outputChannel, "telegram");
+  assert.equal(decision.bypassModel, false);
+  assert.deepEqual(decision.capabilityIds, ["ssh.jev"]);
+  assert.match(decision.reason, /Multi-step/);
+  assert.equal(decision.additionalOutputs[0].text, "Messaggio inviato su Telegram.");
+});
+
 test("selects helping capabilities and the requested output from typed Jev answers", async () => {
   const orchestrator = new JevOrhcestatorOrchestrator({
     apiKey: "test",
@@ -237,5 +283,118 @@ test("sends the last 10 conversation turns to Jev for follow-up routing", async 
   assert.equal(decision.bypassModel, true);
   assert.deepEqual(body.state.history, history.slice(-10));
   assert.equal(body.state.text, "Le metti blu");
+});
+
+const sshCapabilities = [
+  {
+    id: "ssh.jev",
+    name: "control_remote_computer_jev",
+    description: "Natural-language remote computer control",
+    inputSchema: { type: "object" },
+    tags: ["direct", "ssh", "mac"],
+  },
+];
+
+test("remembers a protocol phrase without forcing a remote-computer capability", async () => {
+  const stored = [];
+  const message = {
+    id: "1",
+    channel: "web",
+    userId: "thomas",
+    text: 'ricorda che quando dico "protocollo ragazza in casa" devi impostare le luci del ufficio rosse',
+    createdAt: new Date(),
+    metadata: {},
+  };
+  const orchestrator = new JevOrhcestatorOrchestrator({
+    apiKey: "test",
+    fetch: async () => {
+      throw new Error("Jev should not be called when remembering a protocol");
+    },
+    memory: {
+      async upsertNode(node) {
+        stored.push(node);
+        return node;
+      },
+      async remember(entry) {
+        stored.push(entry);
+      },
+    },
+    capabilityDiscovery: {
+      async discover() {
+        return sshCapabilities;
+      },
+    },
+  });
+
+  const decision = await orchestrator.orchestrate(
+    message,
+    [{ channel: "web", async write() {} }],
+  );
+
+  assert.equal(decision.bypassModel, true);
+  assert.deepEqual(decision.capabilityIds, []);
+  assert.equal(message.metadata.protocolTrigger, "protocollo ragazza in casa");
+  assert.match(message.metadata.protocolConfirmation, /protocollo ragazza in casa/);
+  assert.ok(stored.some((item) => item.type === "protocol" && item.label === "protocollo ragazza in casa"));
+});
+
+test("expands a remembered protocol and routes the action with Jev", async () => {
+  let body;
+  const message = {
+    id: "1",
+    channel: "web",
+    userId: "thomas",
+    text: "protocollo ragazza in casa",
+    createdAt: new Date(),
+    metadata: {},
+  };
+  const orchestrator = new JevOrhcestatorOrchestrator({
+    apiKey: "test",
+    fetch: async (_url, init) => {
+      body = JSON.parse(init.body);
+      return mockFetch({
+        memory: { type: "noul", noul: 0.1 },
+        "cap:home-assistant.jev": { type: "noul", noul: 0.95 },
+        "cap:ssh.jev": { type: "noul", noul: 0.1 },
+      })();
+    },
+    memory: {
+      async listNodes() {
+        return [{
+          type: "protocol",
+          label: "protocollo ragazza in casa",
+          data: {
+            trigger: "protocollo ragazza in casa",
+            expansion: "imposta le luci del ufficio rosse",
+          },
+        }];
+      },
+    },
+    capabilityDiscovery: {
+      async discover() {
+        return [
+          {
+            id: "home-assistant.jev",
+            name: "control_home_assistant_jev",
+            description: "Natural-language home control",
+            inputSchema: { type: "object" },
+            tags: ["direct", "home-assistant", "luci"],
+          },
+          ...sshCapabilities,
+        ];
+      },
+    },
+  });
+
+  const decision = await orchestrator.orchestrate(
+    message,
+    [{ channel: "web", async write() {} }],
+  );
+
+  assert.equal(message.metadata.originalText, "imposta le luci del ufficio rosse");
+  assert.equal(body.state.text, "imposta le luci del ufficio rosse");
+  assert.match(JSON.stringify(body), /protocollo ragazza in casa/);
+  assert.equal(decision.bypassModel, true);
+  assert.deepEqual(decision.capabilityIds, ["home-assistant.jev"]);
 });
 

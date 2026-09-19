@@ -92,6 +92,7 @@ const TYPE_COLORS: Record<string, string> = {
   place: "#eab308",
   organization: "#ec4899",
   document: "#f8fafc",
+  protocol: "#14b8a6",
 };
 
 export function buildGraph(

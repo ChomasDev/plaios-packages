@@ -67,6 +67,7 @@
 .graph-type-dot.type-place { background: #eab308; }
 .graph-type-dot.type-organization { background: #ec4899; }
 .graph-type-dot.type-document { background: #f8fafc; }
+.graph-type-dot.type-protocol { background: #14b8a6; }
 .graph-inspector { overflow-y: auto; }
 .graph-inspector-head { background: linear-gradient(135deg, color-mix(in oklch, var(--muted), transparent 55%), transparent); }
 .graph-footer { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; border-top: 1px solid var(--border); padding: .55rem .7rem; color: var(--muted-foreground); font: .5rem/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; }

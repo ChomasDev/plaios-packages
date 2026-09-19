@@ -23,6 +23,8 @@ const ENTITY_KEYS: Readonly<Record<string, NodeType>> = {
   skills: MemoryNodeType.Skill,
   project: MemoryNodeType.Project,
   projects: MemoryNodeType.Project,
+  protocol: MemoryNodeType.Protocol,
+  protocols: MemoryNodeType.Protocol,
 };
 
 /**

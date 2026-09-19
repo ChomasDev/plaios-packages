@@ -12,6 +12,7 @@ export enum MemoryNodeType {
   Preference = "preference",
   Skill = "skill",
   Project = "project",
+  Protocol = "protocol",
 }
 
 export type NodeType = MemoryNodeType | (string & {});

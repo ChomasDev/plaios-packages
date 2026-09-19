@@ -275,3 +275,28 @@ test("exposes a live graph management bridge", async () => {
   assert.equal(data.totalNodes, 0);
   await provider.close();
 });
+
+test("stores protocol nodes and lists them by type", async () => {
+  const provider = new SQLiteDatabaseProvider({ databasePath: ":memory:" });
+  const graph = new GraphMemory({ database: provider.scope("protocol-test") });
+  await graph.upsertNode({
+    id: "",
+    type: MemoryNodeType.Protocol,
+    label: "protocollo agentos",
+    data: {
+      trigger: "protocollo agentos",
+      expansion: "Apri http://100.103.217.8:3100 sul Mac",
+      url: "http://100.103.217.8:3100",
+    },
+    kind: "procedural",
+    userId: "thomas",
+    metadata: { namespace: "protocol" },
+  });
+
+  const protocols = await graph.listNodes({ type: MemoryNodeType.Protocol, userId: "thomas" });
+  assert.equal(protocols.length, 1);
+  assert.equal(protocols[0]?.type, MemoryNodeType.Protocol);
+  assert.equal(protocols[0]?.label, "protocollo agentos");
+  assert.equal((protocols[0]?.data as { url?: string }).url, "http://100.103.217.8:3100");
+  await provider.close();
+});
