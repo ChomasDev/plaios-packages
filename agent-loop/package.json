@@ -1,6 +1,6 @@
 {
   "name": "@agent-os/agent-loop",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "description": "Default model and capability execution loop for Agent OS",
   "keywords": ["agent-os", "agent", "loop", "capabilities"],
   "private": false,

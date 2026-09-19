@@ -1,7 +1,7 @@
 schemaVersion: 1
 id: agent-loop
 name: Default Agent Loop
-version: 0.1.0
+version: 0.1.3
 description: Runs the selected model with dynamically discovered capabilities
 interfaces:
   - id: agent-loop.agent

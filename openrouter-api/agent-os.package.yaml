@@ -1,7 +1,7 @@
 schemaVersion: 1
 id: openrouter-api
 name: OpenAI-compatible API
-version: 0.1.0
+version: 0.1.2
 description: OpenAI and OpenRouter-compatible HTTP API with correlated output, SSE, Responses API, and OpenClaw WebSocket protocol v4
 interfaces:
   - id: openrouter-api.input

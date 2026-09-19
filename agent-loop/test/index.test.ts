@@ -77,6 +77,91 @@ test("always exposes memory retrieval and forwards message identity", async () =
   });
 });
 
+test("bypassModel executes the capability with raw text and skips the generative model", async () => {
+  let modelCalls = 0;
+  let received: unknown;
+  const home: Capability = {
+    manifest: {
+      id: "home-assistant.jev",
+      name: "control_home_assistant_jev",
+      description: "Natural-language home control",
+      inputSchema: { type: "object" },
+    },
+    async execute(input) {
+      received = input;
+      return { success: true, data: { summary: "Turned off Office." } };
+    },
+  };
+  const loop = new DefaultAgentLoop({
+    model: {
+      provider: "test",
+      model: "test",
+      settings: {},
+      async processWithFunctions() {
+        modelCalls += 1;
+        return { type: "text" as const, text: "model" };
+      },
+      async processInput() {
+        modelCalls += 1;
+        return { type: "text" as const, text: "model" };
+      },
+      async functionCall() {
+        throw new Error("not used");
+      },
+    } as AIProvider,
+    capabilityDiscovery: {
+      async register() {},
+      async get(id) {
+        return id === "home-assistant.jev" ? home : undefined;
+      },
+      async discover() {
+        return [];
+      },
+    },
+    alwaysCapabilityIds: [],
+  });
+
+  const result = await loop.run(
+    {
+      id: "input-2",
+      channel: "web",
+      sessionId: "session-1",
+      text: "turn off all the lights in the office",
+      createdAt: new Date(),
+    },
+    { capabilityIds: ["home-assistant.jev"], stream: false, bypassModel: true },
+  );
+
+  assert.equal(modelCalls, 0);
+  assert.deepEqual(received, { text: "turn off all the lights in the office" });
+  assert.deepEqual(result, { type: "text", text: "Turned off Office." });
+
+  await loop.run(
+    {
+      id: "input-3",
+      channel: "web",
+      sessionId: "session-1",
+      text: "Conversation history:\nUSER: Spegni le luci in ufficio\nCurrent request:\nImposta verdi",
+      createdAt: new Date(),
+      metadata: {
+        originalText: "Imposta verdi",
+        conversationHistory: [
+          { role: "user", content: "Spegni le luci in ufficio" },
+          { role: "assistant", content: "Fatto, ho spento Luce ufficio." },
+        ],
+      },
+    },
+    { capabilityIds: ["home-assistant.jev"], stream: false, bypassModel: true },
+  );
+  assert.deepEqual(received, {
+    text: "Imposta verdi",
+    history: [
+      { role: "user", content: "Spegni le luci in ufficio" },
+      { role: "assistant", content: "Fatto, ho spento Luce ufficio." },
+    ],
+  });
+});
+
 const memoryManifest: CapabilityManifest = {
   id: "memory.retrieval",
   name: "memory_retrieval",

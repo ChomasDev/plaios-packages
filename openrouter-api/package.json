@@ -1,6 +1,6 @@
 {
   "name": "@agent-os/openrouter-api",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "OpenAI/OpenRouter-compatible HTTP input and output with OpenClaw protocol support",
   "keywords": ["agent-os", "openai", "openrouter", "openclaw", "api", "input", "output"],
   "private": false,

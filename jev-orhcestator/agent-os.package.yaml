@@ -1,7 +1,7 @@
 schemaVersion: 1
 id: jev-orhcestator
 name: JevOrhcestator
-version: 0.1.0
+version: 0.1.4
 description: TypeSafe Jev router that selects capabilities and output channels
 interfaces:
   - id: jev-orhcestator.orchestrator
@@ -10,7 +10,7 @@ interfaces:
     entry: .
     export: .
     className: JevOrhcestatorOrchestrator
-    description: Chooses capability ids and an output channel with typed Jev judgments
+    description: Chooses capability ids and an output channel with typed Jev judgments. Direct-tagged capabilities receive the raw user text and skip the generative model.
     required: [discovery]
     config:
       - key: maxCapabilities
@@ -18,6 +18,11 @@ interfaces:
         required: false
         default: 50
         description: Maximum capabilities included in one routing decision
+      - key: apiKey
+        env: JEV_API_KEY
+        type: secret
+        required: false
+        description: TypeSafe Jev API key used to choose capabilities
     web:
       entry: ./web/orchestrator
       export: default

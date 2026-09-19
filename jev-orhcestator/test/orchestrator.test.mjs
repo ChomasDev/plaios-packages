@@ -91,7 +91,7 @@ test("keeps capabilities whose noul is at least 0.5, ranked by probability", asy
   assert.deepEqual(decision.additionalOutputs, []);
 });
 
-test("falls back to text discovery when Jev fails", async () => {
+test("falls back to all capabilities when Jev fails", async () => {
   const orchestrator = new JevOrhcestatorOrchestrator({
     apiKey: "test",
     fetch: async () => new Response("offline", { status: 401 }),
@@ -107,7 +107,135 @@ test("falls back to text discovery when Jev fails", async () => {
     [{ channel: "telegram", async write() {} }],
   );
 
-  assert.deepEqual(decision.capabilityIds, ["home-assistant.control"]);
+  assert.deepEqual(decision.capabilityIds, ["home-assistant.control", "web.search"]);
   assert.equal(decision.outputChannel, "telegram");
   assert.match(decision.reason, /Jev routing failed/);
 });
+
+test("sends a high-confidence direct capability around the generative model", async () => {
+  const orchestrator = new JevOrhcestatorOrchestrator({
+    apiKey: "test",
+    fetch: mockFetch({
+      memory: { type: "noul", noul: 0.1 },
+      "cap:home-assistant.jev": { type: "noul", noul: 0.96 },
+      "cap:web.search": { type: "noul", noul: 0.2 },
+    }),
+    capabilityDiscovery: {
+      async discover() {
+        return [
+          {
+            id: "home-assistant.jev",
+            name: "control_home_assistant_jev",
+            description: "Natural-language home control",
+            inputSchema: { type: "object" },
+            tags: ["direct", "home-assistant"],
+          },
+          {
+            id: "web.search",
+            name: "search_web",
+            description: "Search the web",
+            inputSchema: { type: "object" },
+          },
+        ];
+      },
+    },
+  });
+
+  const decision = await orchestrator.orchestrate(
+    { id: "1", channel: "web", text: "turn off all the lights in the office", createdAt: new Date() },
+    [{ channel: "web", async write() {} }],
+  );
+
+  assert.equal(decision.bypassModel, true);
+  assert.deepEqual(decision.capabilityIds, ["home-assistant.jev"]);
+});
+
+test("bypasses to a direct capability even when another capability ranks slightly higher", async () => {
+  const orchestrator = new JevOrhcestatorOrchestrator({
+    apiKey: "test",
+    fetch: mockFetch({
+      memory: { type: "noul", noul: 0.1 },
+      "cap:home-assistant.control": { type: "noul", noul: 0.99 },
+      "cap:home-assistant.jev": { type: "noul", noul: 0.94 },
+    }),
+    capabilityDiscovery: {
+      async discover() {
+        return [
+          {
+            id: "home-assistant.control",
+            name: "control_home_assistant",
+            description: "Structured home control",
+            inputSchema: { type: "object" },
+            tags: ["home-assistant"],
+          },
+          {
+            id: "home-assistant.jev",
+            name: "control_home_assistant_jev",
+            description: "Natural-language home control",
+            inputSchema: { type: "object" },
+            tags: ["direct", "home-assistant"],
+          },
+        ];
+      },
+    },
+  });
+
+  const decision = await orchestrator.orchestrate(
+    { id: "1", channel: "web", text: "spegni le luci in ufficio", createdAt: new Date() },
+    [{ channel: "web", async write() {} }],
+  );
+
+  assert.equal(decision.bypassModel, true);
+  assert.deepEqual(decision.capabilityIds, ["home-assistant.jev"]);
+});
+
+test("sends the last 10 conversation turns to Jev for follow-up routing", async () => {
+  let body;
+  const orchestrator = new JevOrhcestatorOrchestrator({
+    apiKey: "test",
+    fetch: async (_url, init) => {
+      body = JSON.parse(init.body);
+      return mockFetch({
+        memory: { type: "noul", noul: 0.1 },
+        "cap:home-assistant.jev": { type: "noul", noul: 0.91 },
+      })();
+    },
+    capabilityDiscovery: {
+      async discover() {
+        return [
+          {
+            id: "home-assistant.jev",
+            name: "control_home_assistant_jev",
+            description: "Natural-language home control",
+            inputSchema: { type: "object" },
+            tags: ["direct", "home-assistant"],
+          },
+        ];
+      },
+    },
+  });
+
+  const history = Array.from({ length: 12 }, (_, index) => ({
+    role: index % 2 === 0 ? "user" : "assistant",
+    content: `turn ${index + 1}`,
+  }));
+
+  const decision = await orchestrator.orchestrate(
+    {
+      id: "1",
+      channel: "web",
+      text: "Le metti blu",
+      createdAt: new Date(),
+      metadata: {
+        originalText: "Le metti blu",
+        conversationHistory: history,
+      },
+    },
+    [{ channel: "web", async write() {} }],
+  );
+
+  assert.equal(decision.bypassModel, true);
+  assert.deepEqual(body.state.history, history.slice(-10));
+  assert.equal(body.state.text, "Le metti blu");
+});
+

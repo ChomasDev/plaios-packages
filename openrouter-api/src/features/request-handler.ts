@@ -7,6 +7,7 @@ import {
   renderConversation,
   renderResponsesInput,
 } from "./conversation.js";
+import { compactHistory, ConversationStore } from "./conversation-store.js";
 import { HttpError } from "./http-error.js";
 import { writeError, writeJson } from "./http-response.js";
 import { safeLog } from "./logger.js";
@@ -19,6 +20,7 @@ import {
 import { writeResponsesCompletion, writeResponsesSse } from "./responses-response.js";
 import { ResponseCoordinator } from "./response-coordinator.js";
 import type {
+  ChatCompletionMessage,
   ChatCompletionRequest,
   OpenRouterApiLogEvent,
   OpenRouterApiModel,
@@ -36,6 +38,7 @@ export class RequestHandler {
     private readonly options: ResolvedOpenRouterApiOptions,
     private readonly models: readonly OpenRouterApiModel[],
     private readonly responses: ResponseCoordinator,
+    private readonly conversations = new ConversationStore(),
   ) {}
 
   async handle(
@@ -160,7 +163,9 @@ export class RequestHandler {
       completionId,
       "chat.completions",
     );
-    const message = this.createMessage(request, body, completionId);
+    const sessionId = this.chatSessionId(request, body);
+    const messages = this.conversations.resolve(sessionId, body.messages);
+    const message = this.createMessage(request, body, completionId, sessionId, messages);
     response.setHeader("x-request-id", completionId);
 
     await this.responses.run(context, message, listener);
@@ -175,35 +180,34 @@ export class RequestHandler {
       );
     }
 
+    const reply = output.chunks.join("");
+    this.conversations.remember(sessionId, messages, reply);
     context.responded = true;
     if (body.stream === true) {
       await writeSse(context, toAsyncIterable(output.chunks));
       return;
     }
-    writeCompletion(context, output.chunks.join(""));
+    writeCompletion(context, reply);
   }
 
   private createMessage(
     request: IncomingMessage,
     body: ChatCompletionRequest,
     completionId: string,
+    sessionId: string,
+    messages: readonly ChatCompletionMessage[],
   ): InputMessage {
-    const sessionId =
-      normalizeText(body.session_id) ??
-      normalizeText(firstHeader(request, "x-openclaw-session-key")) ??
-      normalizeText(body.user) ??
-      normalizeText(firstHeader(request, "x-session-id")) ??
-      this.options.sessionId ??
-      `openrouter-${randomUUID()}`;
+    const history = compactHistory(messages.slice(0, -1));
     return {
       id: `input-${randomUUID()}`,
       channel: "openrouter-api",
       sessionId,
       userId: normalizeText(body.user) ?? normalizeText(this.options.userId),
-      text: renderConversation(body.messages),
+      text: renderConversation(messages),
       createdAt: new Date(),
       metadata: {
-        originalText: lastUserMessageText(body.messages),
+        originalText: lastUserMessageText(messages),
+        conversationHistory: history,
         preferredOutputChannel: "openrouter-api",
         requestId: completionId,
         transport: "openrouter-api",
@@ -219,6 +223,18 @@ export class RequestHandler {
     };
   }
 
+  private chatSessionId(request: IncomingMessage, body: ChatCompletionRequest): string {
+    return (
+      normalizeText(firstHeader(request, "x-openclaw-session-key")) ??
+      normalizeText(body.session_id) ??
+      normalizeText(firstHeader(request, "x-session-id")) ??
+      this.options.sessionId ??
+      (this.options.userId ? `openrouter-${this.options.userId}` : undefined) ??
+      (normalizeText(body.user) ? `openrouter-${normalizeText(body.user)}` : undefined) ??
+      "openrouter"
+    );
+  }
+
   private createResponsesMessage(
     request: IncomingMessage,
     body: ResponsesRequest,
@@ -226,10 +242,11 @@ export class RequestHandler {
   ): InputMessage {
     const sessionId =
       normalizeText(firstHeader(request, "x-openclaw-session-key")) ??
-      normalizeText(body.user) ??
       normalizeText(firstHeader(request, "x-session-id")) ??
       this.options.sessionId ??
-      `openresponses-${randomUUID()}`;
+      (this.options.userId ? `openresponses-${this.options.userId}` : undefined) ??
+      (normalizeText(body.user) ? `openresponses-${normalizeText(body.user)}` : undefined) ??
+      "openresponses";
     return {
       id: `input-${randomUUID()}`,
       channel: "openrouter-api",

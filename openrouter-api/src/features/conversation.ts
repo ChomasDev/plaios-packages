@@ -28,9 +28,33 @@ export function lastUserMessageText(
     const message = messages[index];
     if (message?.role !== "user") continue;
     const content = renderContent(message.content).trim();
-    if (content) return content;
+    if (content) return lastUserUtterance(content);
   }
   return undefined;
+}
+
+export function lastUserUtterance(text: string): string {
+  const turns = parseTranscriptTurns(text);
+  const lastUser = [...turns].reverse().find((turn) => turn.role === "user");
+  return lastUser?.content ?? text.trim();
+}
+
+export function parseTranscriptTurns(
+  text: string,
+): Array<{ role: "user" | "assistant" | "system"; content: string }> {
+  const trimmed = text.trim();
+  if (!/(?:^|\n)(?:USER|ASSISTANT|SYSTEM):/i.test(trimmed)) return [];
+  return trimmed
+    .split(/\n(?=(?:USER|ASSISTANT|SYSTEM):)/i)
+    .flatMap((block) => {
+      const match = block.match(/^(USER|ASSISTANT|SYSTEM):\s*([\s\S]*)$/i);
+      if (!match) return [];
+      const content = match[2]!.trim();
+      if (!content) return [];
+      const label = match[1]!.toLowerCase();
+      const role = label === "assistant" ? "assistant" : label === "system" ? "system" : "user";
+      return [{ role, content }];
+    });
 }
 
 export function renderResponsesInput(request: ResponsesRequest): string {

@@ -1,6 +1,6 @@
 {
   "name": "@agent-os/action-home-assistant",
-  "version": "0.1.2",
+  "version": "0.1.7",
   "description": "Dynamic Home Assistant controls and agent capability for Agent OS",
   "keywords": [
     "agent-os",
@@ -37,7 +37,8 @@
   },
   "dependencies": {
     "@agent-os/core": "workspace:*",
-    "@agent-os/microfrontend": "workspace:*"
+    "@agent-os/microfrontend": "workspace:*",
+    "@typesafe-ai/sdk": "^0.6.0"
   },
   "peerDependencies": {
     "react": ">=19.0.0"

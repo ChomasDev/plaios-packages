@@ -1,7 +1,9 @@
 {
   "name": "@agent-os/jev-orhcestator",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.1.4",
+  "description": "TypeSafe Jev orchestrator that can send natural-language commands directly to capabilities",
+  "keywords": ["agent-os", "capability", "orchestrator", "jev", "typesafe"],
+  "private": false,
   "type": "module",
   "sideEffects": [
     "**/*.css"
@@ -43,5 +45,11 @@
     "@types/react": "^19.0.0",
     "react": "19.2.4",
     "typescript": "7.0.2"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

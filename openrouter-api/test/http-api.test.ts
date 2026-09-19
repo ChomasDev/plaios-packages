@@ -234,6 +234,92 @@ test("supports the OpenClaw WebSocket chat handshake, send, and history", async 
   }, listener);
 });
 
+test("keeps chat history on a stable user session when the client sends only the latest turn", async () => {
+  const received: InputMessage[] = [];
+  const api = new OpenRouterApiInput({ port: 0, log: false, userId: "thomas" });
+  const listener: InputListener = async (message) => {
+    received.push(message);
+    await api.write(received.length === 1 ? "Ho spento le luci in ufficio." : "Le metto verdi.");
+  };
+
+  await withServer(api, async (baseUrl) => {
+    const first = await fetch(`${baseUrl}/v1/chat/completions`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        model: "agent-os",
+        messages: [{ role: "user", content: "Spegni le luci in ufficio" }],
+      }),
+    });
+    assert.equal(first.status, 200);
+    const second = await fetch(`${baseUrl}/v1/chat/completions`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        model: "agent-os",
+        messages: [{ role: "user", content: "Imposta verdi" }],
+      }),
+    });
+    assert.equal(second.status, 200);
+    assert.equal(received[0]?.sessionId, "openrouter-thomas");
+    assert.equal(received[1]?.sessionId, "openrouter-thomas");
+    assert.equal(received[1]?.metadata?.originalText, "Imposta verdi");
+    assert.match(received[1]?.text ?? "", /Spegni le luci in ufficio/);
+    assert.deepEqual(received[1]?.metadata?.conversationHistory, [
+      { role: "user", content: "Spegni le luci in ufficio" },
+      { role: "assistant", content: "Ho spento le luci in ufficio." },
+    ]);
+  }, listener);
+});
+
+test("expands an OpenClaw transcript into the last user turn plus recent history", async () => {
+  let received: InputMessage | undefined;
+  const api = new OpenRouterApiInput({ port: 0, log: false, userId: "thomas" });
+  const listener: InputListener = async (message) => {
+    received = message;
+    await api.write("Ho impostato le luci sul blu.");
+  };
+
+  await withServer(api, async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/v1/chat/completions`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        model: "agent-os",
+        messages: [{
+          role: "user",
+          content: [
+            "Conversation supplied through an OpenRouter-compatible API:",
+            "",
+            "USER:",
+            "Accendi tutte le luci in ufficio.",
+            "",
+            "ASSISTANT:",
+            "Fatto, ho acceso led ufficio e Luce ufficio.",
+            "",
+            "USER:",
+            "Le metti verdi.",
+            "",
+            "ASSISTANT:",
+            "Fatto, ho impostato le luci dell’ufficio sul verde.",
+            "",
+            "USER:",
+            "Le metti blu.",
+          ].join("\n"),
+        }],
+      }),
+    });
+    assert.equal(response.status, 200);
+    assert.equal(received?.metadata?.originalText, "Le metti blu.");
+    assert.deepEqual(received?.metadata?.conversationHistory, [
+      { role: "user", content: "Accendi tutte le luci in ufficio." },
+      { role: "assistant", content: "Fatto, ho acceso led ufficio e Luce ufficio." },
+      { role: "user", content: "Le metti verdi." },
+      { role: "assistant", content: "Fatto, ho impostato le luci dell’ufficio sul verde." },
+    ]);
+  }, listener);
+});
+
 async function withServer(
   api: OpenRouterApiInput,
   task: (baseUrl: string) => Promise<void>,
