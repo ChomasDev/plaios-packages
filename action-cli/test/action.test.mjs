@@ -25,3 +25,11 @@ test("rejects mutation, external paths, and process environment flags", async ()
     if (!result.success) assert.equal(result.error.code, "ARGUMENT_NOT_ALLOWED");
   }
 });
+
+test("advertises the configured allowlist and still enforces it", async () => {
+  const action = new RunCLICommandCapability({ env, allowedCommands: "echo,ssh" });
+  assert.match(action.manifest.inputSchema.properties.command.description, /Allowed: echo, ssh\./);
+  const result = await action.execute({ command: "rm", args: ["x"] }, context);
+  assert.equal(result.success, false);
+  if (!result.success) assert.equal(result.error.code, "COMMAND_NOT_ALLOWED");
+});

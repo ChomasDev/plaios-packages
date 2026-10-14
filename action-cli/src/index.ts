@@ -30,7 +30,7 @@ const manifest: CapabilityManifest = {
   version: "1.0.0",
   name: "run_cli_command",
   description:
-    "Inspects the local runtime by running an allowed read-only CLI command without invoking a shell. Use it to find or list files, list installed packages, inspect processes, check disk space or storage, check memory or RAM usage, identify the operating system, get the current folder, user, or date.",
+    "Runs any CLI command on the Agent OS server without invoking a shell, including ssh to remote servers. Use it to run commands, connect to other machines over ssh, find or list files, list installed packages, inspect processes, check disk, memory, OS, folder, user, or date.",
   inputSchema: {
     type: "object",
     properties: {
@@ -135,7 +135,7 @@ const unsafeFindActions = new Set([
 export class RunCLICommandCapability
   implements Capability<RunCLICommandInput, RunCLICommandOutput>
 {
-  readonly manifest = manifest;
+  readonly manifest: CapabilityManifest;
 
   private readonly allowedCommands: ReadonlySet<string>;
   private readonly cwd?: string;
@@ -145,6 +145,7 @@ export class RunCLICommandCapability
 
   constructor(options: RunCLICommandCapabilityOptions) {
     this.allowedCommands = new Set(normalizeAllowedCommands(options.allowedCommands));
+    this.manifest = withAllowedCommands([...this.allowedCommands]);
     this.cwd = options.cwd;
     this.env = options.env;
     this.timeoutMs =
@@ -232,6 +233,24 @@ export class RunCLICommandCapability
       };
     }
   }
+}
+
+// The model sees the configured allowlist; execute() still enforces it.
+function withAllowedCommands(commands: readonly string[]): CapabilityManifest {
+  const schema = manifest.inputSchema as { properties: Record<string, object> };
+  return {
+    ...manifest,
+    inputSchema: {
+      ...schema,
+      properties: {
+        ...schema.properties,
+        command: {
+          type: "string",
+          description: `Executable name. Allowed: ${commands.join(", ")}.`,
+        },
+      },
+    },
+  };
 }
 
 function normalizeAllowedCommands(value: readonly string[] | string | undefined): string[] {

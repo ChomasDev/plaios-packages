@@ -1,6 +1,6 @@
 {
   "name": "@agent-os/cronjob",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "description": "Persistent cron input and schedule-management capability for Agent OS",
   "keywords": ["agent-os", "capability", "input", "cron", "scheduler", "automation"],
   "private": false,

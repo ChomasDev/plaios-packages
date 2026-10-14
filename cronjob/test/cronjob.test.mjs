@@ -18,6 +18,7 @@ function fixture() {
     scheduler,
     defaultTimezone: "Europe/Rome",
     preferredOutputChannel: "telegram",
+    userId: "thomas",
   });
   return { adapter, callbacks, provider };
 }
@@ -43,6 +44,7 @@ test("the live input and management capability share one scheduler", async () =>
   await callbacks[0]();
   assert.equal(messages.length, 1);
   assert.equal(messages[0].metadata.preferredOutputChannel, "telegram");
+  assert.equal(messages[0].userId, "thomas");
 
   await adapter.stop();
   await listening;

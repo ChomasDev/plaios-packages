@@ -1,7 +1,7 @@
 schemaVersion: 1
 id: cronjob
 name: Cron Scheduler
-version: 0.1.0
+version: 0.1.3
 description: Persistent scheduled prompts with a live input and an agent-manageable capability
 interfaces:
   - id: cronjob.input
@@ -40,6 +40,11 @@ interfaces:
         required: false
         default: false
         description: Allow six-field schedules with second-level frequency
+      - key: userId
+        env: AGENT_OS_USER_ID
+        type: string
+        required: false
+        description: User id scheduled runs act as, so they can recall that user's memory
     capability:
       id: cronjobs.manage
       version: 1.0.0

@@ -55,6 +55,8 @@ export interface CronjobAdapterOptions {
   database: Database;
   scheduler?: CronScheduler;
   sessionId?: string;
+  /** Scheduled runs act as this user so they can recall that user's memory. */
+  userId?: string;
   defaultTimezone?: string;
   preferredOutputChannel?: string;
   maxJobs?: number;
@@ -517,7 +519,8 @@ export class CronjobAdapter
       id: `input-${randomUUID()}`,
       channel: this.channel,
       sessionId: this.options.sessionId ?? `cronjob-${job.id}`,
-      text: job.prompt,
+      ...(this.options.userId ? { userId: this.options.userId } : {}),
+      text: scheduledPromptText(job, triggeredAt),
       createdAt: triggeredAt,
       metadata: {
         preferredOutputChannel: job.preferredOutputChannel,
@@ -612,6 +615,28 @@ function toRow(job: Cronjob): CronjobRow {
     lastRunAt: job.lastRunAt ? new Date(job.lastRunAt) : null,
     lastError: job.lastError ?? null,
   };
+}
+
+/**
+ * Frames the stored prompt as a trigger to execute now. Sent raw, a prompt like
+ * "Every evening do X" reads as the user stating a preference, and the agent
+ * replies "I'll keep that in mind" instead of doing X.
+ */
+function scheduledPromptText(job: Cronjob, triggeredAt: Date): string {
+  const localTime = new Intl.DateTimeFormat("it-IT", {
+    timeZone: job.timezone,
+    dateStyle: "full",
+    timeStyle: "short",
+  }).format(triggeredAt);
+  return [
+    `[Scheduled job "${job.name}" triggered at ${localTime} (${job.timezone})]`,
+    "This is an automatic trigger, not a message from the user. Carry out the",
+    "instructions below now, for this run, and reply with only the result to",
+    "deliver to the user. Do not acknowledge, save, or reschedule the instructions.",
+    "",
+    "Instructions:",
+    job.prompt,
+  ].join("\n");
 }
 
 function requiredText(value: string | undefined, field: string): string {
