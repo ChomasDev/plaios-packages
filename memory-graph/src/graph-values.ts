@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { MemoryEntry } from "@agent-os/core/domain";
+import type { MemoryEntry } from "@plaios/core/domain";
 import type { EdgeType, NodeType } from "./types.js";
 
 export function entityId(

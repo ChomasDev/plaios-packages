@@ -1,9 +1,9 @@
 {
-  "name": "@agent-os/telegram",
+  "name": "@plaios/telegram",
   "version": "0.1.3",
-  "description": "Telegram input and output capability for Agent OS",
+  "description": "Telegram input and output capability for PLAIOS",
   "keywords": [
-    "agent-os",
+    "plaios",
     "capability",
     "telegram",
     "input",
@@ -38,8 +38,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@agent-os/core": "workspace:*",
-    "@agent-os/microfrontend": "workspace:*"
+    "@plaios/core": "workspace:*",
+    "@plaios/microfrontend": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=19.0.0"

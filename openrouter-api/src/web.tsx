@@ -11,7 +11,7 @@ import {
   InstanceSummary,
   MicrofrontendFrame,
   type MicrofrontendProps,
-} from "@agent-os/microfrontend";
+} from "@plaios/microfrontend";
 
 interface ApiData {
   listening?: boolean;

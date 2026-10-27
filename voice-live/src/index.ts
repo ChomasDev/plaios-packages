@@ -5,7 +5,7 @@ import type {
   InputInterface,
   InputListener,
   Memory,
-} from "@agent-os/core/domain";
+} from "@plaios/core/domain";
 
 export interface VoiceLiveInputOptions {
   apiKey?: string;
@@ -27,7 +27,7 @@ export interface RealtimeTool {
 }
 
 const DEFAULT_INSTRUCTIONS =
-  "You are Agent OS, a live voice assistant. Answer briefly and naturally in the user's language. " +
+  "You are PLAIOS, a live voice assistant. Answer briefly and naturally in the user's language. " +
   "Use the available tools whenever the request needs an action or data; say what you are doing while a tool runs. " +
   "Use the memory retrieval tool when the user refers to something you may have been told before.";
 const MEMORY_LIMIT = 20;

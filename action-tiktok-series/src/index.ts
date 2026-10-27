@@ -4,7 +4,7 @@ import type {
   CapabilityManifest,
   CapabilityResult,
   Environment,
-} from "@agent-os/core/domain";
+} from "@plaios/core/domain";
 import { SERIES_BIBLE, episodeNumber } from "./series.js";
 
 export { SERIES_BIBLE, episodeNumber };

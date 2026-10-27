@@ -1,6 +1,6 @@
 # Live Voice input
 
-`@agent-os/voice-live` adds a real-time voice agent to the Agent OS web UI.
+`@plaios/voice-live` adds a real-time voice agent to the PLAIOS web UI.
 The browser opens a WebRTC call to the OpenAI Realtime API; the backend only
 mints short-lived client secrets and executes tools, so the API key never
 reaches the browser.

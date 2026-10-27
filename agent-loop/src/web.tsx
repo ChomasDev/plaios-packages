@@ -1,1 +1,1 @@
-export { CapabilityMicrofrontend as default } from "@agent-os/microfrontend";
+export { CapabilityMicrofrontend as default } from "@plaios/microfrontend";

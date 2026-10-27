@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { Capability, CapabilityDiscovery, Memory, MemoryEntry } from "@agent-os/core/domain";
+import type { Capability, CapabilityDiscovery, Memory, MemoryEntry } from "@plaios/core/domain";
 import { VoiceLiveInput, toolName } from "../src/index.js";
 
 const echo: Capability = {

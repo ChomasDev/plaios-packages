@@ -1,8 +1,8 @@
 {
-  "name": "@agent-os/jev-orchestrator",
+  "name": "@plaios/jev-orchestrator",
   "version": "0.1.9",
   "description": "TypeSafe Jev orchestrator that can send natural-language commands directly to capabilities",
-  "keywords": ["agent-os", "capability", "orchestrator", "jev", "typesafe"],
+  "keywords": ["plaios", "capability", "orchestrator", "jev", "typesafe"],
   "private": false,
   "type": "module",
   "sideEffects": [
@@ -32,15 +32,15 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@agent-os/core": "workspace:*",
-    "@agent-os/microfrontend": "workspace:*",
-    "@agent-os/systems": "workspace:*"
+    "@plaios/core": "workspace:*",
+    "@plaios/microfrontend": "workspace:*",
+    "@plaios/systems": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=19.0.0"
   },
   "devDependencies": {
-    "@agent-os/system1-jev": "workspace:*",
+    "@plaios/system1-jev": "workspace:*",
     "@types/node": "24.13.3",
     "@types/react": "^19.0.0",
     "react": "19.2.4",

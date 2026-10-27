@@ -8,7 +8,7 @@ import type {
   SystemAskOptions,
   SystemQuestion,
   SystemQuestions,
-} from "@agent-os/core/domain";
+} from "@plaios/core/domain";
 
 export function noul(instructions: unknown, criteria?: NoulQuestion["criteria"]): NoulQuestion {
   return { type: "noul", instructions, ...(criteria ? { criteria } : {}) };

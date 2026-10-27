@@ -1,4 +1,4 @@
-import type { Database, MemoryQuery } from "@agent-os/core/domain";
+import type { Database, MemoryQuery } from "@plaios/core/domain";
 import {
   TABLES,
   type StoredDetail,

@@ -1,4 +1,4 @@
-# @agent-os/action-tiktok-series
+# @plaios/action-tiktok-series
 
 Daily research for the go2match TikTok series "Come vendere un'app online (in fretta)".
 

@@ -10,7 +10,7 @@ import type {
   Capability,
   CapabilityDiscovery,
   InputMessage,
-} from "@agent-os/core/domain";
+} from "@plaios/core/domain";
 
 export interface DefaultAgentLoopOptions {
   model: AIProvider;
@@ -22,7 +22,7 @@ export interface DefaultAgentLoopOptions {
 }
 
 const defaultInstructions = [
-  "You are Agent OS.",
+  "You are PLAIOS.",
   "Use an available capability whenever it can directly answer the request.",
   "For local filesystem or runtime questions, call the relevant capability instead of asking the user to run a command.",
   "Before using a capability you are unsure about, or after one fails, call read_capability_docs with its id to read how it works.",

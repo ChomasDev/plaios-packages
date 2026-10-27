@@ -4,7 +4,7 @@ import type {
   CapabilityManifest,
   CapabilityResult,
   Environment,
-} from "@agent-os/core/domain";
+} from "@plaios/core/domain";
 
 import { filterByQuery } from "../web/action/entity-query.js";
 import { HOME_ASSISTANT_OPENUI } from "../web/action/openui.js";

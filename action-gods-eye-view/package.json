@@ -1,9 +1,9 @@
 {
-  "name": "@agent-os/action-gods-eye-view",
+  "name": "@plaios/action-gods-eye-view",
   "version": "0.8.0",
-  "description": "A native Mapbox 3D globe for Agent OS with AI control and progressive geospatial layers",
+  "description": "A native Mapbox 3D globe for PLAIOS with AI control and progressive geospatial layers",
   "keywords": [
-    "agent-os",
+    "plaios",
     "capability",
     "action",
     "webview",
@@ -44,9 +44,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@agent-os/action-ssh": "workspace:*",
-    "@agent-os/core": "workspace:*",
-    "@agent-os/microfrontend": "workspace:*",
+    "@plaios/action-ssh": "workspace:*",
+    "@plaios/core": "workspace:*",
+    "@plaios/microfrontend": "workspace:*",
     "@mapbox/vector-tile": "^3.0.0",
     "cesium": "^1.124.0",
     "egm96-universal": "^1.1.1",

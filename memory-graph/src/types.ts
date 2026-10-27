@@ -1,4 +1,4 @@
-import type { MemoryEntry, MemoryKind } from "@agent-os/core/domain";
+import type { MemoryEntry, MemoryKind } from "@plaios/core/domain";
 
 /** Built-in graph concepts. Custom string types are also accepted by GraphMemory. */
 export enum MemoryNodeType {

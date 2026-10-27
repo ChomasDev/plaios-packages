@@ -1,12 +1,12 @@
 {
-  "name": "agentos",
+  "name": "plaios",
   "version": "0.8.1",
-  "description": "Agent OS command line entrypoint",
-  "keywords": ["agent-os", "cli", "capabilities", "agents"],
+  "description": "PLAIOS command line entrypoint",
+  "keywords": ["plaios", "cli", "capabilities", "agents"],
   "private": false,
   "type": "module",
   "bin": {
-    "agentos": "./dist/src/cli.js"
+    "plaios": "./dist/src/cli.js"
   },
   "files": ["dist/src", "README.md"],
   "scripts": {
@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@agent-os/package-manager": "workspace:*"
+    "@plaios/package-manager": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "24.13.3",

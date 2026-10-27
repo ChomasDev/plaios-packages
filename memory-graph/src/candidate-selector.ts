@@ -1,4 +1,4 @@
-import type { MemoryQuery } from "@agent-os/core/domain";
+import type { MemoryQuery } from "@plaios/core/domain";
 import {
   cosine,
   hybridLexicalScores,

@@ -2,7 +2,7 @@ import type {
   DatabaseRecord,
   MemoryEntry,
   MemoryKind,
-} from "@agent-os/core/domain";
+} from "@plaios/core/domain";
 import type { EdgeType } from "./types.js";
 
 export interface StoredNode extends DatabaseRecord {

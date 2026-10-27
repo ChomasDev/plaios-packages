@@ -2,7 +2,7 @@ import type {
   DatabaseRecord,
   DatabaseStructure,
   DatabaseTableSchema,
-} from "@agent-os/core";
+} from "@plaios/core";
 
 const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 

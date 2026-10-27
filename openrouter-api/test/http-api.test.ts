@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { AddressInfo } from "node:net";
-import type { InputListener, InputMessage } from "@agent-os/core/domain";
+import type { InputListener, InputMessage } from "@plaios/core/domain";
 import { WebSocket } from "ws";
 import { OpenRouterApiInput } from "../src/index.js";
 
@@ -9,7 +9,7 @@ test("serves health and advertised models", async () => {
   const api = new OpenRouterApiInput({
     port: 0,
     log: false,
-    models: [{ id: "agent-os", name: "Agent OS", contextLength: 128_000 }],
+    models: [{ id: "agent-os", name: "PLAIOS", contextLength: 128_000 }],
   });
 
   await withServer(api, async (baseUrl) => {
@@ -33,7 +33,7 @@ test("correlates a chat request with its JSON response", async () => {
   const api = new OpenRouterApiInput({ port: 0, log: false });
   const listener: InputListener = async (message) => {
     received = message;
-    await api.write("Hello from Agent OS");
+    await api.write("Hello from PLAIOS");
   };
 
   await withServer(api, async (baseUrl) => {
@@ -54,7 +54,7 @@ test("correlates a chat request with its JSON response", async () => {
 
     assert.equal(response.status, 200);
     assert.match(body.id, /^chatcmpl-/);
-    assert.equal(body.choices[0]?.message.content, "Hello from Agent OS");
+    assert.equal(body.choices[0]?.message.content, "Hello from PLAIOS");
     assert.equal(received?.sessionId, "web-1");
     assert.equal(received?.userId, "user-1");
     assert.match(received?.text ?? "", /USER:\nHello/);

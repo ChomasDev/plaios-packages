@@ -2,7 +2,7 @@ import type {
   DatabaseColumnSchema,
   DatabaseColumnType,
   DatabaseStructure,
-} from "@agent-os/core/domain";
+} from "@plaios/core/domain";
 import { TABLES } from "./internal-types.js";
 
 export function createGraphSchema(): DatabaseStructure {

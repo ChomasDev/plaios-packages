@@ -13,7 +13,7 @@ import {
   InstanceSummary,
   MicrofrontendFrame,
   type MicrofrontendProps,
-} from "@agent-os/microfrontend";
+} from "@plaios/microfrontend";
 import type { PublicDevice, SshControlInput, SshDashboard } from "../../src/index.js";
 
 export default function SshAction({

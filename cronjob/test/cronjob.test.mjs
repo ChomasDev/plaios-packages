@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { SQLiteDatabaseProvider } from "@agent-os/sqlite";
+import { SQLiteDatabaseProvider } from "@plaios/sqlite";
 import { CronjobAdapter } from "../dist/src/index.js";
 
 function fixture() {

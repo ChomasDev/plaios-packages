@@ -32,14 +32,14 @@ test("provides namespaced typed CRUD", async () => {
   const createdAt = new Date("2026-01-02T03:04:05.000Z");
   await web.add("pages", {
     id: "one",
-    title: "Agent OS",
+    title: "PLAIOS",
     live: true,
     data: { published: true },
     createdAt,
   });
   await auth.add("pages", { id: "one", title: "Login", visits: 2 });
 
-  assert.equal((await web.get("pages", "one")).title, "Agent OS");
+  assert.equal((await web.get("pages", "one")).title, "PLAIOS");
   assert.equal((await auth.get("pages", "one")).title, "Login");
   assert.deepEqual((await web.get("pages", "one")).data, { published: true });
   assert.equal((await web.get("pages", "one")).live, true);

@@ -1,8 +1,8 @@
 {
-  "name": "@agent-os/codex",
+  "name": "@plaios/codex",
   "version": "0.1.7",
-  "description": "Codex AI provider and management surface for Agent OS",
-  "keywords": ["agent-os", "capability", "system2", "ai", "codex", "openai"],
+  "description": "Codex AI provider and management surface for PLAIOS",
+  "keywords": ["plaios", "capability", "system2", "ai", "codex", "openai"],
   "private": false,
   "type": "module",
   "sideEffects": ["**/*.css"],
@@ -20,9 +20,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@agent-os/core": "workspace:*",
-    "@agent-os/microfrontend": "workspace:*",
-    "@agent-os/systems": "workspace:*",
+    "@plaios/core": "workspace:*",
+    "@plaios/microfrontend": "workspace:*",
+    "@plaios/systems": "workspace:*",
     "@openai/codex-sdk": "^0.163.0"
   },
   "peerDependencies": { "react": ">=19.0.0" },

@@ -1,5 +1,5 @@
 import { memo, useState } from "react";
-import type { MicrofrontendProps } from "@agent-os/microfrontend";
+import type { MicrofrontendProps } from "@plaios/microfrontend";
 
 import { DeviceTile } from "./device-tile.js";
 import { selectEntities } from "./select.js";

@@ -4,7 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
   MicrofrontendFrame,
   type MicrofrontendProps,
-} from "@agent-os/microfrontend";
+} from "@plaios/microfrontend";
 import { GraphStatus, NodeDetails } from "./graph-controls.js";
 import { GraphExplorer } from "./graph-explorer.js";
 import { GraphExplorer3D } from "./graph-explorer-3d.js";

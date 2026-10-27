@@ -5,7 +5,7 @@ Persistent five-field cron schedules that enter AgentOS through the normal input
 Schedules use an IANA timezone and carry a preferred output channel. Six-field, second-level schedules are disabled by default to protect model and API budgets.
 
 ```yaml
-- package: "@agent-os/cronjob"
+- package: "@plaios/cronjob"
   version: 0.1.0
   interface: cronjob.input
   instanceId: input:cronjob

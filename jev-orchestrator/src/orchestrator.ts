@@ -12,7 +12,7 @@ import type {
   SystemAnswers,
   SystemQuestion,
   SystemQuestions,
-} from "@agent-os/core/domain";
+} from "@plaios/core/domain";
 import {
   choice,
   findMatchingProtocol,
@@ -22,7 +22,7 @@ import {
   protocolConfirmation,
   saveProtocol,
   type ProtocolMemory,
-} from "@agent-os/systems";
+} from "@plaios/systems";
 
 export interface JevOrhcestatorOrchestratorOptions {
   capabilityDiscovery: CapabilityDiscovery;

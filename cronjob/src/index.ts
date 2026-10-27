@@ -11,7 +11,7 @@ import type {
   InputInterface,
   InputListener,
   InputMessage,
-} from "@agent-os/core/domain";
+} from "@plaios/core/domain";
 
 const TABLE = "jobs";
 

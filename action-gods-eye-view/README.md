@@ -1,29 +1,29 @@
 # God's Eye View action
 
-A downloadable Agent OS action containing the complete MIT-licensed [God's Eye View](https://github.com/bilawalsidhu/gods-eye-view) application by Bilawal Sidhu.
+A downloadable PLAIOS action containing the complete MIT-licensed [God's Eye View](https://github.com/bilawalsidhu/gods-eye-view) application by Bilawal Sidhu.
 
-The package vendors the upstream source, assets, documentation, and live-feed middleware. Its Agent OS surface now uses Mapbox GL JS directly instead of the upstream Cesium renderer. The original implementation remains in the package as migration reference while its layers are ported to Mapbox one at a time.
+The package vendors the upstream source, assets, documentation, and live-feed middleware. Its PLAIOS surface now uses Mapbox GL JS directly instead of the upstream Cesium renderer. The original implementation remains in the package as migration reference while its layers are ported to Mapbox one at a time.
 
 ## What it adds
 
-- A focused, `cmdk`-style Agent OS command palette with `Cmd/Ctrl+K`.
+- A focused, `cmdk`-style PLAIOS command palette with `Cmd/Ctrl+K`.
 - A native Mapbox GL JS globe with Mapbox Terrain-DEM and 3D buildings.
 - Satellite 3D, Standard 3D, Outdoors 3D, and flat terrain choices.
 - A compact Shadcn-style terrain/layer popover beside search, with restrained Lucide icons.
 - Direct Mapbox gestures, an optional pan/orbit/tilt control pad, Mapbox geocoding, and a clean full-canvas layout.
 - A live, viewport-aware CCTV layer with compact heading-aware low-poly models, x-ray locator rings, and a selected-camera 3D field-of-view volume.
-- A clean Agent OS right inspector with live camera media, source, area, feed type, direction, manual refresh, and a distraction-free full-screen view. Native video feeds play continuously; snapshot-only sources refresh every 7 seconds in the inspector and every 2.5 seconds full screen.
+- A clean PLAIOS right inspector with live camera media, source, area, feed type, direction, manual refresh, and a distraction-free full-screen view. Native video feeds play continuously; snapshot-only sources refresh every 7 seconds in the inspector and every 2.5 seconds full screen.
 - Building-aware mounting at close zoom: cameras prefer the nearest rendered 3D wall and use a grounded low-poly support pole when no suitable wall is nearby.
 - A distinct low-poly traffic-light model for catalog entries explicitly identified as red-light or signal-enforcement cameras.
-- `gods-eye-view.open` AI capability and a `postMessage` bridge for Agent OS navigation commands.
+- `gods-eye-view.open` AI capability and a `postMessage` bridge for PLAIOS navigation commands.
 - Honest migration placeholders for the remaining live data layers that have not yet been ported.
-- Local macOS browser opening or remote opening through `@agent-os/action-ssh`.
+- Local macOS browser opening or remote opening through `@plaios/action-ssh`.
 - Procedural memory for **“occhio di dio”**.
 
 ## Configuration
 
 ```yaml
-- package: "@agent-os/action-gods-eye-view"
+- package: "@plaios/action-gods-eye-view"
   version: 0.7.0
   interface: gods-eye-view.action
   instanceId: action:gods-eye-view
@@ -36,7 +36,7 @@ The package vendors the upstream source, assets, documentation, and live-feed mi
     mapboxStyle: mapbox/standard-satellite
 ```
 
-The Mapbox public access token is required for the embedded Agent OS surface. Keep it in `.env`; it is not included in the downloadable archive.
+The Mapbox public access token is required for the embedded PLAIOS surface. Keep it in `.env`; it is not included in the downloadable archive.
 
 | Setting               | Purpose                                                                               |
 | --------------------- | ------------------------------------------------------------------------------------- |

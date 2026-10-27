@@ -1,4 +1,4 @@
-import type { MicrofrontendProps } from "@agent-os/microfrontend";
+import type { MicrofrontendProps } from "@plaios/microfrontend";
 import { useCallback, useEffect, useState, type ReactNode, type UIEvent } from "react";
 
 import type { StoredSearch } from "../../../src/search-store.js";

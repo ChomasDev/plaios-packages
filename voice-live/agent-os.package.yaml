@@ -2,7 +2,7 @@ schemaVersion: 1
 id: voice-live
 name: Live Voice
 version: 0.1.2
-description: Talk to Agent OS in real time from the browser; the voice model calls every registered capability as a tool
+description: Talk to PLAIOS in real time from the browser; the voice model calls every registered capability as a tool
 interfaces:
   - id: voice-live.input
     kind: input
@@ -10,7 +10,7 @@ interfaces:
     entry: .
     export: .
     className: VoiceLiveInput
-    description: OpenAI Realtime voice session (WebRTC) with all Agent OS capabilities exposed as tools
+    description: OpenAI Realtime voice session (WebRTC) with all PLAIOS capabilities exposed as tools
     channel: voice-live
     surfaces: [web, network]
     permissions: [network.outbound, microphone]

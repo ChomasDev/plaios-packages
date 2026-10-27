@@ -13,7 +13,7 @@ import {
   InstanceSummary,
   MicrofrontendFrame,
   type MicrofrontendProps,
-} from "@agent-os/microfrontend";
+} from "@plaios/microfrontend";
 
 interface VoiceData {
   configured?: boolean;
@@ -138,7 +138,7 @@ export default function VoiceLiveMicrofrontend({ component, data, onSaveConfig }
   useEffect(() => stop, []);
 
   return (
-    <MicrofrontendFrame component={component} title="Live Voice" description="Talk to Agent OS in real time. The voice model calls every registered capability as a tool.">
+    <MicrofrontendFrame component={component} title="Live Voice" description="Talk to PLAIOS in real time. The voice model calls every registered capability as a tool.">
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(22rem,0.6fr)]">
         <div className="space-y-4">
           <Card>

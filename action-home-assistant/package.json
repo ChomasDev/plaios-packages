@@ -1,9 +1,9 @@
 {
-  "name": "@agent-os/action-home-assistant",
+  "name": "@plaios/action-home-assistant",
   "version": "0.2.1",
-  "description": "Dynamic Home Assistant controls and agent capability for Agent OS",
+  "description": "Dynamic Home Assistant controls and agent capability for PLAIOS",
   "keywords": [
-    "agent-os",
+    "plaios",
     "capability",
     "action",
     "home-assistant",
@@ -36,15 +36,15 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@agent-os/core": "workspace:*",
-    "@agent-os/microfrontend": "workspace:*",
-    "@agent-os/systems": "workspace:*"
+    "@plaios/core": "workspace:*",
+    "@plaios/microfrontend": "workspace:*",
+    "@plaios/systems": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=19.0.0"
   },
   "devDependencies": {
-    "@agent-os/system1-jev": "workspace:*",
+    "@plaios/system1-jev": "workspace:*",
     "@types/node": "24.13.3",
     "@types/react": "^19.0.0",
     "react": "19.2.4",

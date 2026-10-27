@@ -1,6 +1,6 @@
 # Graph Memory
 
-`@agent-os/memory-graph` implements the core `Memory` interface with a typed
+`@plaios/memory-graph` implements the core `Memory` interface with a typed
 property graph. It stores base nodes, dynamic type details, weighted edges, and
 embeddings. Text recall ranks vector seed nodes and then performs bounded,
 weighted neighbor traversal.
@@ -23,10 +23,10 @@ refresh, per-node deletion, and protected graph clearing.
 From the CLI:
 
 ```sh
-npx agentos start
+npx plaios start
 ```
 
-Then install `@agent-os/memory-graph` from the Store.
+Then install `@plaios/memory-graph` from the Store.
 
 ## Runtime use
 
@@ -56,7 +56,7 @@ dedicated vector database, inject a `VectorStore`; adapters only need
 conservative built-in extractor for reliable entity recognition in free text.
 
 `upsertNode`, `link`, and `neighbors` expose graph operations without changing
-the `Memory` methods used by Agent OS. Node `data` is dynamic JSON, and custom
+the `Memory` methods used by PLAIOS. Node `data` is dynamic JSON, and custom
 node and edge type strings are supported alongside the built-in enums.
 
 The memory instance also registers the `memory_graph_write` agent capability.

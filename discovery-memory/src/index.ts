@@ -1,4 +1,4 @@
-import type { Capability, CapabilityDiscovery, CapabilityDiscoveryQuery, CapabilityManifest } from "@agent-os/core";
+import type { Capability, CapabilityDiscovery, CapabilityDiscoveryQuery, CapabilityManifest } from "@plaios/core";
 
 export interface DiscoveryMicrofrontendData {
   capabilityCount: number;

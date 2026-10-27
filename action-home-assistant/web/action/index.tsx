@@ -13,7 +13,7 @@ import {
   InstanceSummary,
   MicrofrontendFrame,
   type MicrofrontendProps,
-} from "@agent-os/microfrontend";
+} from "@plaios/microfrontend";
 import type {
   HomeAssistantAction,
   HomeAssistantControlInput,
@@ -106,7 +106,7 @@ export default function HomeAssistantAction({
     <MicrofrontendFrame
       component={component}
       title="Home Assistant"
-      description="A live control surface for the entities exposed by your Home Assistant instance. Credentials remain in the Agent OS runtime."
+      description="A live control surface for the entities exposed by your Home Assistant instance. Credentials remain in the PLAIOS runtime."
     >
       <div className="ha-stack">
         <section className="ha-overview">

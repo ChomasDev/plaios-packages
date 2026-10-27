@@ -6,7 +6,7 @@ import type {
   CapabilityManifest,
   CapabilityResult,
   Environment,
-} from "@agent-os/core/domain";
+} from "@plaios/core/domain";
 
 export interface RunCLICommandInput {
   command: string;
@@ -28,7 +28,7 @@ export interface RunCLICommandCapabilityOptions {
 
 const DOCS = `# run_cli_command
 
-Runs one executable on the Agent OS server, without a shell, from the Agent OS workspace. Only executables in the configured allowlist are accepted (the \`command\` description lists them); by default these are read-only inspection tools (ls, find, stat, df, du, free, uname, ps, which, dpkg-query, ...). \`ssh\` and other tools work only if the operator added them to the allowlist.
+Runs one executable on the PLAIOS server, without a shell, from the PLAIOS workspace. Only executables in the configured allowlist are accepted (the \`command\` description lists them); by default these are read-only inspection tools (ls, find, stat, df, du, free, uname, ps, which, dpkg-query, ...). \`ssh\` and other tools work only if the operator added them to the allowlist.
 
 ## When to use
 - Inspecting the server itself: files in the workspace, disk, memory, OS, processes, installed packages, date, user.
@@ -52,7 +52,7 @@ const manifest: CapabilityManifest = {
   version: "1.0.0",
   name: "run_cli_command",
   description:
-    "Runs one allowlisted executable on the Agent OS server, without a shell. Use it to find or list workspace files, list installed packages, inspect processes, or check disk, memory, OS, folder, user, or date. Only the executables listed in the command field are accepted.",
+    "Runs one allowlisted executable on the PLAIOS server, without a shell. Use it to find or list workspace files, list installed packages, inspect processes, or check disk, memory, OS, folder, user, or date. Only the executables listed in the command field are accepted.",
   inputSchema: {
     type: "object",
     properties: {
@@ -108,7 +108,7 @@ const manifest: CapabilityManifest = {
       },
     },
     {
-      request: "Find a file named config.json in the Agent OS workspace",
+      request: "Find a file named config.json in the PLAIOS workspace",
       arguments: {
         command: "find",
         args: [".", "-name", "config.json"],
@@ -266,7 +266,7 @@ const workspaceCommands = new Set(["ls", "find", "stat", "du"]);
 function validateArguments(command: string, args: readonly string[]): string | undefined {
   if (workspaceCommands.has(command)) {
     const unsafePath = args.find((argument) => isUnsafeWorkspacePath(argument));
-    if (unsafePath) return `Path outside the Agent OS workspace is not allowed: "${unsafePath}"`;
+    if (unsafePath) return `Path outside the PLAIOS workspace is not allowed: "${unsafePath}"`;
     // A files0-from list echoes each unreadable "name" back, which would leak any file's contents (.env included).
     if (args.some((argument) => /^-?-files0-from/.test(argument))) return "files0-from is not allowed";
   }

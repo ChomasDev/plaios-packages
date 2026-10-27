@@ -14,7 +14,7 @@ import {
   MicrofrontendFrame,
   Textarea,
   type MicrofrontendProps,
-} from "@agent-os/microfrontend";
+} from "@plaios/microfrontend";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type {

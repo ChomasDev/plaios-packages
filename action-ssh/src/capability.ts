@@ -4,7 +4,7 @@ import type {
   CapabilityManifest,
   CapabilityResult,
   Environment,
-} from "@agent-os/core/domain";
+} from "@plaios/core/domain";
 
 import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";

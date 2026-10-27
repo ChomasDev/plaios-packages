@@ -1,4 +1,4 @@
-import type { MemoryEntry } from "@agent-os/core/domain";
+import type { MemoryEntry } from "@plaios/core/domain";
 import type { RankedNode, StoredNode } from "./internal-types.js";
 import { asRecord, cloneEntry } from "./graph-values.js";
 import type { GraphNode } from "./types.js";

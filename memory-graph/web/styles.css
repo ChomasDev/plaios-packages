@@ -1,4 +1,4 @@
-@import "@agent-os/microfrontend/styles.css";
+@import "@plaios/microfrontend/styles.css";
 
 .agentos-memory-graph { display: grid; gap: 1rem; }
 .agentos-memory-graph canvas { outline: none; }

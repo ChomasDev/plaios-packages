@@ -1,9 +1,9 @@
 {
-  "name": "@agent-os/systems",
+  "name": "@plaios/systems",
   "version": "0.1.0",
-  "description": "Shared System 1 / System 2 helpers for Agent OS plugins: question builders, System 2 ask, remembered protocols",
+  "description": "Shared System 1 / System 2 helpers for PLAIOS plugins: question builders, System 2 ask, remembered protocols",
   "keywords": [
-    "agent-os",
+    "plaios",
     "system1",
     "system2"
   ],
@@ -27,7 +27,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@agent-os/core": "workspace:*"
+    "@plaios/core": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "24.13.3",

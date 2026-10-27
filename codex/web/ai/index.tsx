@@ -1,10 +1,10 @@
 "use client";
 
-import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, ConfigurationEditor, InstanceSummary, MicrofrontendFrame, type MicrofrontendProps } from "@agent-os/microfrontend";
+import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, ConfigurationEditor, InstanceSummary, MicrofrontendFrame, type MicrofrontendProps } from "@plaios/microfrontend";
 import type { CodexProviderData } from "../types.js";
 
 export default function CodexAIMicrofrontend({ component, data, onSaveConfig }: MicrofrontendProps<CodexProviderData>) {
-  return <MicrofrontendFrame component={component} title="Codex AI" description="Configure the model adapter and inspect the security boundary used for Agent OS requests.">
+  return <MicrofrontendFrame component={component} title="Codex AI" description="Configure the model adapter and inspect the security boundary used for PLAIOS requests.">
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
       <ConfigurationEditor component={component} onSaveConfig={onSaveConfig} />
       <div className="space-y-5">

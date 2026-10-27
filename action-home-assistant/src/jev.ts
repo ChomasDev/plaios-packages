@@ -1,4 +1,4 @@
-import { choice, compactTurns, noul, noulOf } from "@agent-os/systems";
+import { choice, compactTurns, noul, noulOf } from "@plaios/systems";
 import type {
   Capability,
   CapabilityExecutionContext,
@@ -8,7 +8,7 @@ import type {
   System2,
   SystemAnswers,
   SystemQuestions,
-} from "@agent-os/core/domain";
+} from "@plaios/core/domain";
 
 import {
   CONTROLLABLE_DOMAINS,

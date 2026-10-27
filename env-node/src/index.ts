@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { rename, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
-import type { Environment } from "@agent-os/core";
+import type { Environment } from "@plaios/core";
 
 export interface EnvironmentVariableDto {
   key: string;

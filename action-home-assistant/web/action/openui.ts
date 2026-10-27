@@ -1,4 +1,4 @@
-import type { OpenUIComponentSpec } from "@agent-os/microfrontend";
+import type { OpenUIComponentSpec } from "@plaios/microfrontend";
 
 const query = { name: "query", type: "string", optional: true, description: "Words matched against the device name, area and entity id, for example \"garage\" or \"cucina\"; omit to show all." } as const;
 const entityIds = { name: "entityIds", type: "string[]", optional: true, description: "Exact entity ids, when a tool call already told you which ones; takes precedence over query." } as const;

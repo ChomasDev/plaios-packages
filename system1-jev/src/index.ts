@@ -1,4 +1,4 @@
-import type { System1, SystemAnswers, SystemAskOptions, SystemQuestions } from "@agent-os/core/domain";
+import type { System1, SystemAnswers, SystemAskOptions, SystemQuestions } from "@plaios/core/domain";
 import { TypeSafeClient, type Fetch } from "@typesafe-ai/sdk";
 
 export interface JevSystem1Options {

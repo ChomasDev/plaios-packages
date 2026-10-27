@@ -16,7 +16,7 @@ ssh-keygen -t ed25519 -f ~/.ssh/agent-os-mac -N "" -C agent-os
 3. Add the computer to Agent OS:
 
 ```yaml
-- package: "@agent-os/action-ssh"
+- package: "@plaios/action-ssh"
   version: 0.1.1
   interface: ssh.jev
   instanceId: action:ssh-jev

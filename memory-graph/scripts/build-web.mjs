@@ -12,6 +12,6 @@ await build({
   external: [
     "react",
     "react/jsx-runtime",
-    "@agent-os/microfrontend",
+    "@plaios/microfrontend",
   ],
 });

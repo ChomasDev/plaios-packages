@@ -10,7 +10,7 @@ import {
   InstanceSummary,
   MicrofrontendFrame,
   type MicrofrontendProps,
-} from "@agent-os/microfrontend";
+} from "@plaios/microfrontend";
 import { memo, useEffect, useMemo, useState } from "react";
 
 import { CRONJOB_OPENUI } from "./openui.js";

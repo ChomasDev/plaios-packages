@@ -1,8 +1,8 @@
 {
-  "name": "@agent-os/voice-live",
+  "name": "@plaios/voice-live",
   "version": "0.1.2",
-  "description": "Live voice input: OpenAI Realtime (WebRTC) agent that speaks in real time and calls every Agent OS capability as a tool",
-  "keywords": ["agent-os", "voice", "realtime", "openai", "input"],
+  "description": "Live voice input: OpenAI Realtime (WebRTC) agent that speaks in real time and calls every PLAIOS capability as a tool",
+  "keywords": ["plaios", "voice", "realtime", "openai", "input"],
   "private": false,
   "type": "module",
   "sideEffects": ["**/*.css"],
@@ -20,8 +20,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@agent-os/core": "workspace:*",
-    "@agent-os/microfrontend": "workspace:*"
+    "@plaios/core": "workspace:*",
+    "@plaios/microfrontend": "workspace:*"
   },
   "peerDependencies": { "react": ">=19.0.0" },
   "devDependencies": {

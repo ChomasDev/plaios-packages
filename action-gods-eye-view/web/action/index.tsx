@@ -7,7 +7,7 @@ import {
   InstanceSummary,
   MicrofrontendFrame,
   type MicrofrontendProps,
-} from "@agent-os/microfrontend";
+} from "@plaios/microfrontend";
 
 import type {
   GodsEyeViewCommandEnvelope,
@@ -159,7 +159,7 @@ export default function GodsEyeViewAction({
     <MicrofrontendFrame
       component={component}
       title="God's Eye View"
-      description="The complete live intelligence globe, bundled locally and controllable by Agent OS."
+      description="The complete live intelligence globe, bundled locally and controllable by PLAIOS."
     >
       <div className="gev-shell">
         <section className="gev-console" aria-label="God's Eye View console">

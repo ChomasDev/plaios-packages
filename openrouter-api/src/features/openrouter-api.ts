@@ -8,7 +8,7 @@ import type {
   InputListener,
   OutputContent,
   OutputInterface,
-} from "@agent-os/core/domain";
+} from "@plaios/core/domain";
 import { defaultOpenRouterApiLog, safeLog } from "./logger.js";
 import { OpenClawWebSocketGateway } from "./openclaw-websocket.js";
 import { RequestHandler } from "./request-handler.js";

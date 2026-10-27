@@ -216,7 +216,7 @@ export class PersistentCodexAppServer {
     });
     try {
       await this.request("initialize", {
-        clientInfo: { name: "agent-os", title: "Agent OS", version: "0.1.2" },
+        clientInfo: { name: "agent-os", title: "PLAIOS", version: "0.1.2" },
         capabilities: { experimentalApi: true, requestAttestation: false },
       });
       this.notify("initialized");
@@ -267,7 +267,7 @@ export class PersistentCodexAppServer {
         continue;
       }
       if (message.id !== undefined && message.method) {
-        this.child?.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id: message.id, error: { code: -32601, message: "Agent OS does not support this server request" } })}\n`);
+        this.child?.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id: message.id, error: { code: -32601, message: "PLAIOS does not support this server request" } })}\n`);
         continue;
       }
       for (const listener of this.listeners) listener(message);

@@ -4,14 +4,14 @@ import { promisify } from "node:util";
 import {
   SshCapability,
   type SshCapabilityOptions,
-} from "@agent-os/action-ssh";
+} from "@plaios/action-ssh";
 import type {
   Capability,
   CapabilityExecutionContext,
   CapabilityManifest,
   CapabilityResult,
   Environment,
-} from "@agent-os/core/domain";
+} from "@plaios/core/domain";
 import { BundledGodsEyeViewServer } from "./server.js";
 
 export type GodsEyeViewLayer =
@@ -198,7 +198,7 @@ const CCTV_COVERAGE_HINTS = [
 
 const DOCS = `# open_gods_eye_view
 
-Opens and drives the bundled God's Eye View 3D globe (Mapbox): centers on a geocoded place, switches live layers (CCTV cameras, flights, vessels, satellites, earthquakes, traffic, radio) and basemap, and forwards any of the app's native AI actions. The view shows in the Agent OS webview and, by default, also opens in the browser of the paired Mac.
+Opens and drives the bundled God's Eye View 3D globe (Mapbox): centers on a geocoded place, switches live layers (CCTV cameras, flights, vessels, satellites, earthquakes, traffic, radio) and basemap, and forwards any of the app's native AI actions. The view shows in the PLAIOS webview and, by default, also opens in the browser of the paired Mac.
 
 ## When to use
 - The user says "occhio di dio" or asks to see, find or track cameras/CCTV, aircraft, ships, satellites, earthquakes, traffic or a place on the globe.
@@ -490,7 +490,7 @@ export class GodsEyeViewCapability
     });
     const targetDevice = cleanOptional(input.deviceId) ?? this.defaultDeviceId ?? null;
     const launch = input.openOnMac === false
-      ? { opened: false, deviceId: targetDevice, message: "Loaded in the Agent OS webview." }
+      ? { opened: false, deviceId: targetDevice, message: "Loaded in the PLAIOS webview." }
       : await this.openUrl(url, targetDevice, context);
     const coverageNotice = cameraCoverageNotice(layer, requestedLocation, resolved?.displayName);
     const locationLabel = resolved?.displayName ?? requestedLocation ?? null;

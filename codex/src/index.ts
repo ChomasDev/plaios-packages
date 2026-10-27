@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { Codex, type ApprovalMode, type CodexOptions, type Input as CodexInput, type ModelReasoningEffort, type SandboxMode, type WebSearchMode } from "@openai/codex-sdk";
-import type { AIExecutableFunctionDefinition, AIFunctionCallResult, AIFunctionDefinition, AIFunctionProcessOptions, AIInput, AIModelSettings, AIProcessOptions, AIProcessResult, JsonSchema, System2, SystemAnswers, SystemAskOptions, SystemQuestions } from "@agent-os/core";
-import { askWithFunctionCall } from "@agent-os/systems";
+import type { AIExecutableFunctionDefinition, AIFunctionCallResult, AIFunctionDefinition, AIFunctionProcessOptions, AIInput, AIModelSettings, AIProcessOptions, AIProcessResult, JsonSchema, System2, SystemAnswers, SystemAskOptions, SystemQuestions } from "@plaios/core";
+import { askWithFunctionCall } from "@plaios/systems";
 import { PersistentCodexAppServer, type PersistentThreadOptions } from "./persistent-app-server.js";
 
 export interface CodexProviderOptions {
@@ -24,9 +24,9 @@ export interface CodexProviderOptions {
 interface FunctionStep { type: "text" | "function-call"; name: string; arguments: unknown; text: string | null; finishOnSuccess: boolean; }
 
 const providerInstructions = [
-  "You are the model inside Agent OS.",
+  "You are the model inside PLAIOS.",
   "Do not inspect or modify the workspace and do not use Codex built-in tools.",
-  "Use only the request and the Agent OS capabilities explicitly described in it.",
+  "Use only the request and the PLAIOS capabilities explicitly described in it.",
 ].join(" ");
 
 export class CodexProvider implements System2 {
@@ -149,7 +149,7 @@ function requireImagePath(value: string): string { const path = value.trim(); if
 
 export function createCapabilityFollowUp(name: string, output: unknown): CodexInput {
   const text = [
-    `Agent OS executed "${name}".`,
+    `PLAIOS executed "${name}".`,
     "",
     "Capability result:",
     serialize(output),
@@ -168,7 +168,7 @@ function imagesFromCapabilityOutput(output: unknown): Array<{ type: "local_image
   return [{ type: "local_image", path }];
 }
 
-function createFunctionInstructions(definitions: readonly AIExecutableFunctionDefinition[]): string { return ["Choose whether to call one Agent OS capability or return the final answer.", "For a function call, set type to function-call and provide its exact name and arguments.", "Set finishOnSuccess to true only for one unambiguous state-changing command when no result data, follow-up capability, delay, or additional action is needed. In that case, write a short natural confirmation in the user's language in text; it will be sent only after the capability reports success.", "For reads, questions, uncertain targets, delayed, visual, or multi-step requests, set finishOnSuccess to false and text to null so you can inspect the capability result, including any screenshot.", "If a capability returns a screenshot or localPath image, look at that image before describing what you see.", "For a final answer, set type to text, name to an empty string, arguments to null, finishOnSuccess to false, and provide text.", "Available Agent OS capabilities:", serialize(definitions.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })))].join("\n"); }
+function createFunctionInstructions(definitions: readonly AIExecutableFunctionDefinition[]): string { return ["Choose whether to call one PLAIOS capability or return the final answer.", "For a function call, set type to function-call and provide its exact name and arguments.", "Set finishOnSuccess to true only for one unambiguous state-changing command when no result data, follow-up capability, delay, or additional action is needed. In that case, write a short natural confirmation in the user's language in text; it will be sent only after the capability reports success.", "For reads, questions, uncertain targets, delayed, visual, or multi-step requests, set finishOnSuccess to false and text to null so you can inspect the capability result, including any screenshot.", "If a capability returns a screenshot or localPath image, look at that image before describing what you see.", "For a final answer, set type to text, name to an empty string, arguments to null, finishOnSuccess to false, and provide text.", "Available PLAIOS capabilities:", serialize(definitions.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })))].join("\n"); }
 
 function createFunctionStepSchema(definitions: readonly AIExecutableFunctionDefinition[]) {
   return { type: "object", properties: { type: { type: "string", enum: ["text", "function-call"] }, name: { type: "string", enum: ["", ...definitions.map(({ name }) => name)] }, arguments: { anyOf: [{ type: "null" }, ...definitions.map(({ inputSchema }) => normalizeCodexOutputSchema(inputSchema))] }, text: { type: ["string", "null"] }, finishOnSuccess: { type: "boolean" } }, required: ["type", "name", "arguments", "text", "finishOnSuccess"], additionalProperties: false } as const;

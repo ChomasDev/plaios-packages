@@ -1,13 +1,13 @@
 # OpenRouter-compatible API input
 
-`@agent-os/input-openrouter-api` exposes Agent OS through an
+`@plaios/input-openrouter-api` exposes PLAIOS through an
 OpenAI/OpenRouter-compatible HTTP API. The adapter implements both
 `InputInterface` and `OutputInterface`; register the same instance as an input
 and an output so concurrent HTTP responses remain correlated with their
 originating requests.
 
 ```ts
-import { OpenRouterApiInput } from "@agent-os/input-openrouter-api";
+import { OpenRouterApiInput } from "@plaios/input-openrouter-api";
 
 const webApi = new OpenRouterApiInput({
   hostname: "127.0.0.1",

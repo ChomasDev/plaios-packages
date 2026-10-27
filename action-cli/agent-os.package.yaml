@@ -34,7 +34,7 @@ interfaces:
       id: cli.run-command
       version: 1.0.0
       name: run_cli_command
-      description: Run one allowlisted executable on the Agent OS server, without a shell; only configured executables are allowed.
+      description: Run one allowlisted executable on the PLAIOS server, without a shell; only configured executables are allowed.
       permissions: [cli.execute, filesystem.read]
       tags: [cli, command, local, filesystem, packages, processes]
       execution: { timeoutMs: 5000, idempotent: true }

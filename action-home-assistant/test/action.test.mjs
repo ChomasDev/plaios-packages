@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { JevSystem1 } from "@agent-os/system1-jev";
+import { JevSystem1 } from "@plaios/system1-jev";
 import { HomeAssistantCapability } from "../dist/src/index.js";
 
 const context = { runId: "run-1", callId: "call-1", startedAt: new Date() };

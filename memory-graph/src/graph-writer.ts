@@ -1,4 +1,4 @@
-import type { MemoryEntry } from "@agent-os/core/domain";
+import type { MemoryEntry } from "@plaios/core/domain";
 import {
   asRecord,
   cloneEntry,

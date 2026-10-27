@@ -1,8 +1,8 @@
 {
-  "name": "@agent-os/agent-loop",
+  "name": "@plaios/agent-loop",
   "version": "0.2.0",
-  "description": "Default model and capability execution loop for Agent OS",
-  "keywords": ["agent-os", "agent", "loop", "capabilities"],
+  "description": "Default model and capability execution loop for PLAIOS",
+  "keywords": ["plaios", "agent", "loop", "capabilities"],
   "private": false,
   "type": "module",
   "files": ["dist", "agent-os.package.yaml", "README.md"],
@@ -18,8 +18,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@agent-os/core": "workspace:*",
-    "@agent-os/microfrontend": "workspace:*"
+    "@plaios/core": "workspace:*",
+    "@plaios/microfrontend": "workspace:*"
   },
   "peerDependencies": { "react": ">=19.0.0" },
   "devDependencies": {

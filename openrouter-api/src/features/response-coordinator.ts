@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import type { InputListener, InputMessage, OutputContent } from "@agent-os/core/domain";
+import type { InputListener, InputMessage, OutputContent } from "@plaios/core/domain";
 import { writeSse } from "./completion-response.js";
 import { writeResponsesSse } from "./responses-response.js";
 import type { ResponseContext } from "./types.js";

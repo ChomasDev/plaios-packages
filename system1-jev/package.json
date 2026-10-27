@@ -1,9 +1,9 @@
 {
-  "name": "@agent-os/system1-jev",
+  "name": "@plaios/system1-jev",
   "version": "0.2.0",
-  "description": "TypeSafe Jev System 1 for Agent OS",
+  "description": "TypeSafe Jev System 1 for PLAIOS",
   "keywords": [
-    "agent-os",
+    "plaios",
     "system1",
     "jev",
     "typesafe"
@@ -34,9 +34,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@agent-os/core": "workspace:*",
+    "@plaios/core": "workspace:*",
     "@typesafe-ai/sdk": "^0.6.0",
-    "@agent-os/microfrontend": "workspace:*"
+    "@plaios/microfrontend": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "24.13.3",

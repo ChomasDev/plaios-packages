@@ -1,9 +1,9 @@
 {
-  "name": "@agent-os/action-ssh",
+  "name": "@plaios/action-ssh",
   "version": "0.2.0",
   "description": "SSH remote control for paired Macs and Linux computers, with TypeSafe Jev natural-language routing",
   "keywords": [
-    "agent-os",
+    "plaios",
     "capability",
     "action",
     "ssh",
@@ -34,15 +34,15 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@agent-os/core": "workspace:*",
-    "@agent-os/microfrontend": "workspace:*",
-    "@agent-os/systems": "workspace:*"
+    "@plaios/core": "workspace:*",
+    "@plaios/microfrontend": "workspace:*",
+    "@plaios/systems": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=19.0.0"
   },
   "devDependencies": {
-    "@agent-os/system1-jev": "workspace:*",
+    "@plaios/system1-jev": "workspace:*",
     "@types/node": "24.13.3",
     "@types/react": "^19.0.0",
     "react": "19.2.4",

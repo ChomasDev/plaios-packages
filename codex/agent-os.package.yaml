@@ -10,7 +10,7 @@ interfaces:
     entry: .
     export: .
     className: CodexProvider
-    description: Runs Agent OS model requests through the Codex SDK
+    description: Runs PLAIOS model requests through the Codex SDK
     surfaces: [local, network]
     permissions: [ai.codex]
     required: []

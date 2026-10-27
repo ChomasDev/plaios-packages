@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, ConfigurationEditor, InstanceSummary, MicrofrontendFrame, type MicrofrontendProps } from "@agent-os/microfrontend";
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, ConfigurationEditor, InstanceSummary, MicrofrontendFrame, type MicrofrontendProps } from "@plaios/microfrontend";
 import { useEffect, useState } from "react";
 import type { EnvironmentMicrofrontendData, EnvironmentVariableDto } from "../../src/index.js";
 

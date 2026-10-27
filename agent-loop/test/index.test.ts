@@ -7,7 +7,7 @@ import type {
   Capability,
   CapabilityExecutionContext,
   CapabilityManifest,
-} from "@agent-os/core/domain";
+} from "@plaios/core/domain";
 import { DefaultAgentLoop } from "../src/index.js";
 
 test("always exposes memory retrieval and forwards message identity", async () => {

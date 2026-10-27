@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { JevSystem1 } from "@agent-os/system1-jev";
+import { JevSystem1 } from "@plaios/system1-jev";
 
 import { JevOrhcestatorOrchestrator } from "../dist/src/index.js";
 

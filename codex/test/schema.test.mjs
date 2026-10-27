@@ -12,7 +12,7 @@ test("attaches a screenshot from a capability result so the model can see it", (
   assert.equal(followUp[1].path, "/tmp/agent-os-screenshot.png");
 });
 
-test("maps Agent OS images to Codex local images", () => {
+test("maps PLAIOS images to Codex local images", () => {
   const input = createCodexInput({ text: "What is here?", images: [{ path: "/tmp/photo.jpg", mediaType: "image/jpeg" }] }, "Be concise.");
   assert.notEqual(typeof input, "string");
   assert.deepEqual(input[1], { type: "local_image", path: "/tmp/photo.jpg" });

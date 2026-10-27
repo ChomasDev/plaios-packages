@@ -9,7 +9,7 @@ import type {
   Orchestrator,
   OrchestratorOptions,
   OutputInterface,
-} from "@agent-os/core";
+} from "@plaios/core";
 import {
   createMemoryProposalSchema,
   sanitizeMemoryProposals,
@@ -37,7 +37,7 @@ interface ModelAdditionalOutput {
   text: string;
 }
 const defaultInstructions = [
-  "Route one Agent OS message by prioritizing capabilities that materially help; a configured baseline capability set will remain available to the agent even when routing selects fewer tools.",
+  "Route one PLAIOS message by prioritizing capabilities that materially help; a configured baseline capability set will remain available to the agent even when routing selects fewer tools.",
   "Use recent conversation history only to resolve follow-ups and unfinished tool requests.",
   "Prefer the input channel unless the request asks for another destination; use additional outputs only for explicit multi-destination delivery.",
   "Propose memory only for durable facts, preferences, relationships, or ongoing goals explicitly stated in the current user text.",
@@ -208,7 +208,7 @@ function createDecisionFunction(
 ): AIFunctionDefinition<ModelDecision> {
   return {
     name: "route_agent_message",
-    description: "Selects capability IDs and output channels for an Agent OS message.",
+    description: "Selects capability IDs and output channels for an PLAIOS message.",
     strict: true,
     inputSchema: {
       type: "object",

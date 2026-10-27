@@ -1,8 +1,8 @@
 {
-  "name": "@agent-os/cronjob",
+  "name": "@plaios/cronjob",
   "version": "0.2.0",
-  "description": "Persistent cron input and schedule-management capability for Agent OS",
-  "keywords": ["agent-os", "capability", "input", "cron", "scheduler", "automation"],
+  "description": "Persistent cron input and schedule-management capability for PLAIOS",
+  "keywords": ["plaios", "capability", "input", "cron", "scheduler", "automation"],
   "private": false,
   "type": "module",
   "sideEffects": ["**/*.css"],
@@ -20,13 +20,13 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@agent-os/core": "workspace:*",
-    "@agent-os/microfrontend": "workspace:*",
+    "@plaios/core": "workspace:*",
+    "@plaios/microfrontend": "workspace:*",
     "node-cron": "^4.2.1"
   },
   "peerDependencies": { "react": ">=19.0.0" },
   "devDependencies": {
-    "@agent-os/sqlite": "workspace:*",
+    "@plaios/sqlite": "workspace:*",
     "@types/node": "24.13.3",
     "@types/react": "^19.0.0",
     "react": "19.2.4",

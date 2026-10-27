@@ -7,7 +7,7 @@ import type {
   Database,
   Environment,
   UIComponentSpec,
-} from "@agent-os/core/domain";
+} from "@plaios/core/domain";
 
 import { SearchStore, type StoredSearch } from "./search-store.js";
 import { WEB_SOURCES } from "./ui-components.js";

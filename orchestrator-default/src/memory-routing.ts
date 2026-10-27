@@ -1,4 +1,4 @@
-import type { JsonSchema, MemoryProposal } from "@agent-os/core";
+import type { JsonSchema, MemoryProposal } from "@plaios/core";
 
 const DURABLE_KINDS = ["semantic", "episodic", "procedural"] as const;
 export interface ModelMemoryProposal {

@@ -1,6 +1,6 @@
-# @agent-os/action-home-assistant
+# @plaios/action-home-assistant
 
-A dynamic Home Assistant control package for Agent OS. It discovers configured entity domains, exposes safe controls in the Agent OS UI, and gives the agent a bounded `control_home_assistant` capability.
+A dynamic Home Assistant control package for PLAIOS. It discovers configured entity domains, exposes safe controls in the PLAIOS UI, and gives the agent a bounded `control_home_assistant` capability.
 
 The agent can read live entity states and control lights, switches, TVs and other media players, fans, covers, locks, climate entities, scenes, scripts, and input booleans. Media controls include power, volume, mute, play, pause, and stop. Home Assistant credentials stay in the server-side environment and are never returned through the microfrontend bridge.
 
@@ -21,11 +21,11 @@ light,switch,fan,cover,lock,climate,scene,script,input_boolean,media_player
 
 ## Install
 
-Install it from the Agent OS Store, or add it directly to `agent-os.yaml`:
+Install it from the PLAIOS Store, or add it directly to `plaios.yaml`:
 
 ```yaml
 components:
-  - package: "@agent-os/action-home-assistant"
+  - package: "@plaios/action-home-assistant"
     version: latest
     interface: home-assistant.action
     instanceId: action:home-assistant

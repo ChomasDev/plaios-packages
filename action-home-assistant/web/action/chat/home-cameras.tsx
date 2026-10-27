@@ -1,5 +1,5 @@
 import { memo, useState } from "react";
-import type { MicrofrontendProps } from "@agent-os/microfrontend";
+import type { MicrofrontendProps } from "@plaios/microfrontend";
 
 import { CameraCard } from "./camera-card.js";
 import { selectEntities } from "./select.js";

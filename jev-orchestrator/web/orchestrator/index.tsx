@@ -3,7 +3,7 @@
 import {
   CapabilityMicrofrontend,
   type MicrofrontendProps,
-} from "@agent-os/microfrontend";
+} from "@plaios/microfrontend";
 
 export default function JevOrhcestatorOrchestratorMicrofrontend(
   props: MicrofrontendProps,

@@ -10,7 +10,7 @@ import type {
   InputMessage,
   OutputContent,
   OutputInterface,
-} from "@agent-os/core/domain";
+} from "@plaios/core/domain";
 
 import { TelegramApi } from "./telegram-api.js";
 import type { TelegramAdapterOptions, TelegramUpdate } from "./types.js";

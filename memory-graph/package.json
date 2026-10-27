@@ -1,9 +1,9 @@
 {
-  "name": "@agent-os/memory-graph",
+  "name": "@plaios/memory-graph",
   "version": "0.5.0",
-  "description": "Weighted, decaying, vector-ranked graph memory capability for Agent OS",
+  "description": "Weighted, decaying, vector-ranked graph memory capability for PLAIOS",
   "keywords": [
-    "agent-os",
+    "plaios",
     "capability",
     "memory",
     "graph"
@@ -38,8 +38,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@agent-os/core": "workspace:*",
-    "@agent-os/microfrontend": "workspace:*",
+    "@plaios/core": "workspace:*",
+    "@plaios/microfrontend": "workspace:*",
     "graphology": "^0.26.0",
     "graphology-layout-forceatlas2": "^0.10.1",
     "react-force-graph-3d": "^1.29.1",
@@ -49,7 +49,7 @@
     "react": ">=19.0.0"
   },
   "devDependencies": {
-    "@agent-os/sqlite": "workspace:*",
+    "@plaios/sqlite": "workspace:*",
     "@types/node": "24.13.3",
     "@types/react": "^19.0.0",
     "esbuild": "^0.25.0",

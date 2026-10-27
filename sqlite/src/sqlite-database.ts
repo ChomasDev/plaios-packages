@@ -9,7 +9,7 @@ import type {
   DatabaseRecord,
   DatabaseStructure,
   DatabaseTableSchema,
-} from "@agent-os/core";
+} from "@plaios/core";
 
 import { SQLiteDatabaseAdmin, type SQLiteExecuteOptions } from "./admin.js";
 import {

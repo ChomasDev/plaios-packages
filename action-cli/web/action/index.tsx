@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, ConfigurationEditor, InstanceSummary, MicrofrontendFrame, type MicrofrontendProps } from "@agent-os/microfrontend";
+import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, ConfigurationEditor, InstanceSummary, MicrofrontendFrame, type MicrofrontendProps } from "@plaios/microfrontend";
 
 interface CliData { cwd: string; allowedCommands: string[]; timeoutMs: number; maxOutputBytes: number; shell: boolean; secretEnvironmentForwarded: boolean; }
 

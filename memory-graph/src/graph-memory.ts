@@ -6,7 +6,7 @@ import type {
   Memory,
   MemoryEntry,
   MemoryQuery,
-} from "@agent-os/core/domain";
+} from "@plaios/core/domain";
 import { randomUUID } from "node:crypto";
 import { DefaultEntityExtractor } from "./entity-extractor.js";
 import { GraphNavigator } from "./graph-navigator.js";

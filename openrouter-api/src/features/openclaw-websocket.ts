@@ -5,7 +5,7 @@ import type {
   InputListener,
   InputMessage,
   OutputContent,
-} from "@agent-os/core/domain";
+} from "@plaios/core/domain";
 import { WebSocket, WebSocketServer } from "ws";
 import type { OpenRouterApiModel } from "./types.js";
 import { isRecord, normalizeText as textValue } from "./utils.js";

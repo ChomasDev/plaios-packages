@@ -2,7 +2,7 @@ schemaVersion: 1
 id: action-gods-eye-view
 name: God's Eye View
 version: 0.8.0
-description: Run the native Mapbox 3D God's Eye View globe with Agent OS AI control and progressive geospatial layers
+description: Run the native Mapbox 3D God's Eye View globe with PLAIOS AI control and progressive geospatial layers
 interfaces:
   - id: gods-eye-view.action
     kind: action

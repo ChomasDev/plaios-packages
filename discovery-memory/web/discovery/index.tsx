@@ -1,8 +1,8 @@
 "use client";
 
-import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, ConfigurationEditor, InstanceSummary, MicrofrontendFrame, type MicrofrontendProps } from "@agent-os/microfrontend";
+import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, ConfigurationEditor, InstanceSummary, MicrofrontendFrame, type MicrofrontendProps } from "@plaios/microfrontend";
 import { useState } from "react";
-import type { CapabilityManifest } from "@agent-os/core";
+import type { CapabilityManifest } from "@plaios/core";
 import type { DiscoveryMicrofrontendData } from "../../src/index.js";
 
 export default function DiscoveryMicrofrontend({ component, data, onSaveConfig }: MicrofrontendProps<DiscoveryMicrofrontendData>) {

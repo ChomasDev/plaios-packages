@@ -10,7 +10,7 @@ import {
   protocolConfirmation,
   saveProtocol,
   type ProtocolMemory,
-} from "@agent-os/systems";
+} from "@plaios/systems";
 import type {
   Capability,
   CapabilityExecutionContext,
@@ -20,7 +20,7 @@ import type {
   System2,
   SystemAnswers,
   SystemQuestions,
-} from "@agent-os/core/domain";
+} from "@plaios/core/domain";
 
 import {
   SshCapability,

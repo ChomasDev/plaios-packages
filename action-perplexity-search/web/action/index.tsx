@@ -1,5 +1,5 @@
 "use client";
-import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, ConfigurationEditor, InstanceSummary, MicrofrontendFrame, type MicrofrontendProps, type OpenUIComponentModule } from "@agent-os/microfrontend";
+import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, ConfigurationEditor, InstanceSummary, MicrofrontendFrame, type MicrofrontendProps, type OpenUIComponentModule } from "@plaios/microfrontend";
 
 import { WEB_SOURCES } from "../../src/ui-components.js";
 import { WebSources, type SearchBridge } from "./chat/web-sources.js";

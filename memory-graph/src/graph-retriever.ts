@@ -1,4 +1,4 @@
-import type { MemoryQuery } from "@agent-os/core/domain";
+import type { MemoryQuery } from "@plaios/core/domain";
 import { CandidateSelector } from "./candidate-selector.js";
 import type { RankedNode, StoredNode } from "./internal-types.js";
 import { bounded, type ResolvedGraphOptions } from "./options.js";

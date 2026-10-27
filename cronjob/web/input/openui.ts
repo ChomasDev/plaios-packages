@@ -1,4 +1,4 @@
-import type { OpenUIComponentSpec } from "@agent-os/microfrontend";
+import type { OpenUIComponentSpec } from "@plaios/microfrontend";
 
 /** Shared by the backend (prompt) and the web module (renderer) so the model and the browser agree on the component. */
 export const CRONJOB_OPENUI: OpenUIComponentSpec = {

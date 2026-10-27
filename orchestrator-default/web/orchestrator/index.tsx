@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, ConfigurationEditor, InstanceSummary, MicrofrontendFrame, type MicrofrontendProps } from "@agent-os/microfrontend";
+import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, ConfigurationEditor, InstanceSummary, MicrofrontendFrame, type MicrofrontendProps } from "@plaios/microfrontend";
 
 interface OrchestratorData { modelProvider: string; model: string; discovery: string; minCapabilities: number; maxCapabilities: number; fastPath: boolean; instructionsMode: "default" | "custom"; }
 export default function OrchestratorMicrofrontend({ component, data, onSaveConfig }: MicrofrontendProps<OrchestratorData>) {

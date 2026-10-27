@@ -6,7 +6,7 @@ import type {
   Memory,
   MemoryEntry,
   MemoryKind,
-} from "@agent-os/core/domain";
+} from "@plaios/core/domain";
 
 export interface MemoryRetrievalInput {
   query: string;

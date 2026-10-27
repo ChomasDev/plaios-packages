@@ -1,4 +1,4 @@
-import type { Database } from "@agent-os/core/domain";
+import type { Database } from "@plaios/core/domain";
 
 import type { PerplexitySearchResultItem } from "./index.js";
 

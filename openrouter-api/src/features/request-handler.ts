@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { InputListener, InputMessage } from "@agent-os/core/domain";
+import type { InputListener, InputMessage } from "@plaios/core/domain";
 import { writeCompletion, writeSse } from "./completion-response.js";
 import {
   lastUserMessageText,
@@ -137,7 +137,7 @@ export class RequestHandler {
 
     const output = context.outputs.at(-1);
     if (!output) {
-      throw new HttpError(500, "Agent OS did not write a response", "missing_output");
+      throw new HttpError(500, "PLAIOS did not write a response", "missing_output");
     }
     context.responded = true;
     if (body.stream === true) {
@@ -175,7 +175,7 @@ export class RequestHandler {
     if (!output) {
       throw new HttpError(
         500,
-        "Agent OS did not write a response to the openrouter-api output",
+        "PLAIOS did not write a response to the openrouter-api output",
         "missing_output",
       );
     }

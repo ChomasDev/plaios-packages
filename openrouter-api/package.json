@@ -1,8 +1,8 @@
 {
-  "name": "@agent-os/openrouter-api",
+  "name": "@plaios/openrouter-api",
   "version": "0.1.2",
   "description": "OpenAI/OpenRouter-compatible HTTP input and output with OpenClaw protocol support",
-  "keywords": ["agent-os", "openai", "openrouter", "openclaw", "api", "input", "output"],
+  "keywords": ["plaios", "openai", "openrouter", "openclaw", "api", "input", "output"],
   "private": false,
   "type": "module",
   "sideEffects": ["**/*.css"],
@@ -21,8 +21,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@agent-os/core": "workspace:*",
-    "@agent-os/microfrontend": "workspace:*",
+    "@plaios/core": "workspace:*",
+    "@plaios/microfrontend": "workspace:*",
     "ws": "^8.21.1"
   },
   "peerDependencies": { "react": ">=19.0.0" },

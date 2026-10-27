@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { Database, Memory } from "@agent-os/core/domain";
-import { SQLiteDatabaseProvider } from "@agent-os/sqlite";
+import type { Database, Memory } from "@plaios/core/domain";
+import { SQLiteDatabaseProvider } from "@plaios/sqlite";
 import {
   GraphMemory,
   MemoryEdgeType,

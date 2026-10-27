@@ -1,4 +1,4 @@
-import type { UIComponentSpec } from "@agent-os/core/domain";
+import type { UIComponentSpec } from "@plaios/core/domain";
 
 /** Shared by the capability (prompt) and the web module (renderer), so both agree on the name and props. */
 export const WEB_SOURCES: UIComponentSpec = {

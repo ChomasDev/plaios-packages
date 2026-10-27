@@ -1,6 +1,6 @@
-# @agent-os/sqlite
+# @plaios/sqlite
 
-Capability-scoped SQLite storage for Agent OS, with a full management microfrontend.
+Capability-scoped SQLite storage for PLAIOS, with a full management microfrontend.
 
 ## Features
 
@@ -15,7 +15,7 @@ Capability-scoped SQLite storage for Agent OS, with a full management microfront
 ## Install
 
 ```bash
-pnpm add @agent-os/sqlite --registry http://localhost:4873
+pnpm add @plaios/sqlite --registry http://localhost:4873
 ```
 
 Node 22.5 or newer is required.
@@ -23,7 +23,7 @@ Node 22.5 or newer is required.
 ## Runtime
 
 ```ts
-import { SQLiteDatabaseProvider } from "@agent-os/sqlite";
+import { SQLiteDatabaseProvider } from "@plaios/sqlite";
 
 const provider = new SQLiteDatabaseProvider({
   databasePath: ".agent-os/agent-os.sqlite",
@@ -48,7 +48,7 @@ await database.init({
 
 await database.add("notes", {
   id: "welcome",
-  title: "Welcome to Agent OS",
+  title: "Welcome to PLAIOS",
   createdAt: new Date(),
 });
 
@@ -60,12 +60,12 @@ Namespaces are converted to physical table prefixes. The example above manages `
 
 ## Management microfrontend
 
-The capability exports its database surface at `@agent-os/sqlite/web/database` and its Tailwind entry at `@agent-os/sqlite/web/styles.css`.
+The capability exports its database surface at `@plaios/sqlite/web/database` and its Tailwind entry at `@plaios/sqlite/web/styles.css`.
 
 Pass the provider's opt-in admin bridge to the host surface:
 
 ```tsx
-import SQLiteDatabaseMicrofrontend from "@agent-os/sqlite/web/database";
+import SQLiteDatabaseMicrofrontend from "@plaios/sqlite/web/database";
 
 <SQLiteDatabaseMicrofrontend
   component={component}

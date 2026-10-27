@@ -1,4 +1,4 @@
-import type { OpenUIComponentSpec } from "@agent-os/microfrontend";
+import type { OpenUIComponentSpec } from "@plaios/microfrontend";
 
 /** Shared by the backend (prompt) and the web module (renderer). */
 export const MEMORY_GRAPH_OPENUI: OpenUIComponentSpec = {
