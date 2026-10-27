@@ -2,6 +2,7 @@ export {
   HomeAssistantCapability,
   colorFromText,
   resolveLightColor,
+  type CameraSnapshot,
   type HomeAssistantAction,
   type HomeAssistantCapabilityOptions,
   type HomeAssistantControlInput,
@@ -11,6 +12,7 @@ export {
 } from "./capability.js";
 export {
   HomeAssistantJevCapability,
+  withDeviceCard,
   type HomeAssistantJevCapabilityOptions,
   type HomeAssistantJevInput,
   type HomeAssistantJevOutput,

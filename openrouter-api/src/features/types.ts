@@ -80,18 +80,12 @@ export interface ResponsesRequest {
   [key: string]: unknown;
 }
 
-export type CompatibleApiRequest = ChatCompletionRequest | ResponsesRequest;
-
-export interface BufferedOutput {
-  chunks: string[];
-}
-
 export interface ResponseContext {
-  request: CompatibleApiRequest;
+  request: ChatCompletionRequest | ResponsesRequest;
   response: ServerResponse;
   completionId: string;
   created: number;
-  outputs: BufferedOutput[];
+  outputs: { chunks: string[] }[];
   responded: boolean;
   format: "chat.completions" | "responses";
 }

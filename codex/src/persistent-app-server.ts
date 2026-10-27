@@ -13,12 +13,13 @@ export interface PersistentThreadOptions {
   webSearchMode: WebSearchMode;
 }
 
-export interface PersistentRunOptions {
+interface PersistentRunOptions {
+  onDelta?: (delta: string) => void;
   outputSchema?: unknown;
   signal?: AbortSignal;
 }
 
-export interface PersistentRunResult {
+interface PersistentRunResult {
   finalResponse: string;
 }
 
@@ -63,7 +64,7 @@ export class PersistentCodexAppServer {
   async runTurn(threadOptions: PersistentThreadOptions, existingThreadId: string | null, input: CodexInput, options: PersistentRunOptions): Promise<{ threadId: string; result: PersistentRunResult }> {
     await this.ensureStarted();
     const threadId = existingThreadId ?? await this.createThread(threadOptions);
-    const completion = this.waitForTurn(threadId, options.signal);
+    const completion = this.waitForTurn(threadId, options.signal, options.onDelta);
     try {
       const response = asRecord(await this.request("turn/start", {
         threadId,
@@ -114,7 +115,7 @@ export class PersistentCodexAppServer {
     return requireString(asRecord(response.thread).id, "Codex app-server thread id");
   }
 
-  private waitForTurn(threadId: string, signal?: AbortSignal): { result: Promise<string>; setTurnId(value: string): void; cancel(): void } {
+  private waitForTurn(threadId: string, signal?: AbortSignal, onDelta?: (delta: string) => void): { result: Promise<string>; setTurnId(value: string): void; cancel(): void } {
     let turnId: string | undefined;
     let finalResponse = "";
     let settled = false;
@@ -141,6 +142,10 @@ export class PersistentCodexAppServer {
       }
       if (!params || params.threadId !== threadId) return;
       if (turnId && typeof params.turnId === "string" && params.turnId !== turnId) return;
+      if (message.method === "item/agentMessage/delta") {
+        if (typeof params.delta === "string") onDelta?.(params.delta);
+        return;
+      }
       if (message.method === "item/completed") {
         const item = asOptionalRecord(params.item);
         if (item?.type === "agentMessage" && typeof item.text === "string") finalResponse = item.text;
@@ -276,7 +281,7 @@ export class PersistentCodexAppServer {
   }
 }
 
-export class PersistentCodexThread {
+class PersistentCodexThread {
   private id: string | null = null;
 
   constructor(private readonly server: PersistentCodexAppServer, private readonly options: PersistentThreadOptions) {}
@@ -285,6 +290,27 @@ export class PersistentCodexThread {
     const response = await this.server.runTurn(this.options, this.id, input, options);
     this.id = response.threadId;
     return response.result;
+  }
+
+  /** Same shape as the SDK's streamed turn: agent message updates with the text so far, then the complete text. */
+  async runStreamed(input: CodexInput, options: PersistentRunOptions = {}): Promise<{ events: AsyncGenerator<{ type: string; item?: { type: string; text?: string } }> }> {
+    const queue: string[] = [];
+    let text = "";
+    let done = false;
+    let failure: unknown;
+    let wake = () => {};
+    void this.run(input, { ...options, onDelta: (delta) => { text += delta; queue.push(text); wake(); } })
+      .then((result) => { queue.push(result.finalResponse); })
+      .catch((error: unknown) => { failure = error; })
+      .finally(() => { done = true; wake(); });
+    const events = (async function* () {
+      for (;;) {
+        while (queue.length) yield { type: "item.updated", item: { type: "agent_message", text: queue.shift()! } };
+        if (done) { if (failure) throw failure; return; }
+        await new Promise<void>((resolve) => { wake = resolve; });
+      }
+    })();
+    return { events };
   }
 }
 

@@ -11,7 +11,9 @@ import {
   MicrofrontendFrame,
   type MicrofrontendProps,
 } from "@agent-os/microfrontend";
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
+
+import { CRONJOB_OPENUI } from "./openui.js";
 
 interface Cronjob {
   id: string;
@@ -83,6 +85,19 @@ export default function CronjobInputSurface({
       setOutput(data.policy.preferredOutputChannel);
     }
   }, [data]);
+
+  // Deep link from chat: #component/<instance>?job=<id> focuses that job and loads it into the form for editing.
+  const focusId = new URLSearchParams(location.hash.split("?")[1] ?? "").get("job");
+  useEffect(() => {
+    const job = data?.jobs.find((item) => item.id === focusId);
+    if (!job) return;
+    setName(job.name);
+    setExpression(job.cronExpression);
+    setTimezone(job.timezone);
+    if (job.preferredOutputChannel) setOutput(job.preferredOutputChannel);
+    setPrompt(job.prompt);
+    document.getElementById(`cron-job-${job.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [data, focusId]);
 
   const jobs = snapshot?.jobs ?? [];
   const suspended = useMemo(
@@ -197,7 +212,7 @@ export default function CronjobInputSurface({
             ) : (
               <div className="cron-job-list">
                 {jobs.map((job, index) => (
-                  <article key={job.id} className="cron-job">
+                  <article key={job.id} id={`cron-job-${job.id}`} className={`cron-job${job.id === focusId ? " cron-job--focus" : ""}`}>
                     <div className="cron-job-index">{String(index + 1).padStart(2, "0")}</div>
                     <div className="cron-job-main">
                       <div className="cron-job-title">
@@ -273,3 +288,54 @@ function formatDate(value?: string): string {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
+
+/** Compact card shown inside chat answers: the schedules, with suspend and resume at hand. */
+export function Chat({ data }: MicrofrontendProps<CronData>) {
+  const jobs = data?.jobs ?? [];
+  const actions = data?.actions;
+  if (jobs.length === 0) return <p className="px-5 py-4 text-sm text-muted-foreground">No schedules yet.</p>;
+  return <ul className="divide-y">
+    {jobs.map((job, index) => <li key={job.id} className="rise-in flex items-center gap-3 px-5 py-3" style={{ animationDelay: `${index * 70}ms` }}>
+      <span aria-hidden="true" className={`size-2 shrink-0 rounded-full ${job.status === "active" ? "bg-emerald-500" : "bg-muted-foreground/40"}`} />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium">{job.name}</span>
+        <span className="block truncate text-xs text-muted-foreground">{job.cronExpression} · {job.timezone}{job.lastRunAt ? ` · last ${formatDate(job.lastRunAt)}` : ""}</span>
+      </span>
+      {actions ? <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => void (job.status === "active" ? actions.suspend(job.id) : actions.resume(job.id))}>{job.status === "active" ? "Pause" : "Resume"}</button> : null}
+    </li>)}
+  </ul>;
+}
+
+interface CronjobListArgs { filter?: string }
+
+/** OpenUI component the model can place in an answer: the live schedule list with its controls. */
+const CronjobList = memo(function CronjobList({ component, data, args }: MicrofrontendProps<CronData> & { args: CronjobListArgs }) {
+  const [open, setOpen] = useState<string>();
+  const actions = data?.actions;
+  const needle = args.filter?.trim().toLowerCase();
+  const jobs = (data?.jobs ?? []).filter((job) => !needle || job.name.toLowerCase().includes(needle));
+  if (jobs.length === 0) return <p className="cron-chat-empty">{data ? "No matching schedules." : "Loading schedules…"}</p>;
+  return <ul className="cron-chat-list">
+    {jobs.map((job, index) => <li key={job.id} className="rise-in cron-chat-item" style={{ animationDelay: `${index * 70}ms` }}>
+      <button type="button" className="cron-chat-row" onClick={() => setOpen(open === job.id ? undefined : job.id)} aria-expanded={open === job.id}>
+        <span className={`cron-chat-dot${job.status === "active" ? " is-active" : ""}`} aria-hidden="true" />
+        <span className="cron-chat-main">
+          <span className="cron-chat-name">{job.name}</span>
+          <span className="cron-chat-meta">{job.cronExpression} · {job.timezone}{job.lastRunAt ? ` · last ${formatDate(job.lastRunAt)}` : ""}</span>
+        </span>
+        <span className="cron-chat-chevron">{open === job.id ? "−" : "+"}</span>
+      </button>
+      {open === job.id ? <div className="cron-chat-detail rise-in">
+        <p>{job.prompt}</p>
+        {job.lastError ? <p className="cron-chat-error">{job.lastError}</p> : null}
+        <div className="cron-chat-actions">
+          <button type="button" onClick={() => { location.hash = `component/${encodeURIComponent(component.instanceId)}?job=${encodeURIComponent(job.id)}`; }}>Edit</button>
+          {actions ? <button type="button" onClick={() => void (job.status === "active" ? actions.suspend(job.id) : actions.resume(job.id))}>{job.status === "active" ? "Pause" : "Resume"}</button> : null}
+          {actions ? <button type="button" className="is-danger" onClick={() => { if (window.confirm(`Remove ${job.name}?`)) void actions.remove(job.id); }}>Remove</button> : null}
+        </div>
+      </div> : null}
+    </li>)}
+  </ul>;
+});
+
+export const openui = [{ ...CRONJOB_OPENUI, component: CronjobList }];

@@ -108,7 +108,7 @@ export function buildGraph(
       color: colorFor(node.type),
       fullLabel: node.type === "memory" ? shorten(node.label, 64) : node.label,
       label: node.type === "memory" ? "" : node.label,
-      searchable: `${node.label} ${node.type} ${node.id} ${node.addedMemoryDate ?? ""} ${node.factDate ?? ""}`.toLowerCase(),
+      searchable: searchableFor(node),
       size: sizeFor(node),
       nodeType: node.type,
       x: Math.cos(angle) * distance,
@@ -137,7 +137,7 @@ export function buildThreeGraphData(
     nodes: nodes.map((node) => ({
       ...node,
       color: colorFor(node.type),
-      searchable: `${node.label} ${node.type} ${node.id} ${node.addedMemoryDate ?? ""} ${node.factDate ?? ""}`.toLowerCase(),
+      searchable: searchableFor(node),
       val: Math.max(1, sizeFor(node) * 0.8),
     })),
     links: edges
@@ -152,12 +152,8 @@ export function buildThreeGraphData(
   };
 }
 
-export function nodeById(
-  nodes: readonly GraphNodeDto[],
-  id?: string,
-): GraphNodeDto | undefined {
-  if (!id) return undefined;
-  return nodes.find((node) => node.id === id);
+function searchableFor(node: GraphNodeDto): string {
+  return `${node.label} ${node.type} ${node.id} ${node.addedMemoryDate ?? ""} ${node.factDate ?? ""}`.toLowerCase();
 }
 
 function colorFor(type: string): string {

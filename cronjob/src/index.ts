@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import cron, { type ScheduledTask } from "node-cron";
+import { CRONJOB_OPENUI } from "../web/input/openui.js";
 import type {
   Capability,
   CapabilityExecutionContext,
@@ -54,14 +55,12 @@ export interface CronScheduler {
 export interface CronjobAdapterOptions {
   database: Database;
   scheduler?: CronScheduler;
-  sessionId?: string;
   /** Scheduled runs act as this user so they can recall that user's memory. */
   userId?: string;
   defaultTimezone?: string;
   preferredOutputChannel?: string;
   maxJobs?: number;
   allowSeconds?: boolean;
-  onError?: (error: unknown, job: Cronjob) => void | Promise<void>;
 }
 
 export type ManageCronjobsAction =
@@ -106,6 +105,27 @@ export interface CronjobMicrofrontendData {
     remove(idOrName: string): Promise<CronjobMicrofrontendData>;
   };
 }
+
+const DOCS = `# manage_cronjobs
+
+Adds, lists, suspends, resumes and removes persistent scheduled prompts. At each tick an active job sends its \`prompt\` into the normal agent pipeline (acting as the configured user, so it can recall that user's memory) and the answer goes to its preferred output channel. Jobs survive restarts.
+
+## When to use
+- The user wants something recurring or at a fixed time: "ogni mattina alle 8 mandami il meteo", "every Monday summarize ...", reminders.
+- To just show the user's jobs, write the \`CronjobList\` chat component instead of calling \`list\`; it lets the user pause, resume, edit and remove them. Use \`list\` when you need the data yourself (ids, prompts).
+- Not for doing the task now: answer directly, and only schedule it if asked.
+
+## Inputs
+Every field is required; set the ones the action does not use to null.
+- \`{"action": "add", "idOrName": null, "name": "morning-weather", "cronExpression": "0 8 * * *", "prompt": "Dimmi il meteo di oggi a Treviso.", "timezone": null, "preferredOutputChannel": null}\`
+- \`{"action": "suspend", "idOrName": "morning-weather", "name": null, "cronExpression": null, "prompt": null, "timezone": null, "preferredOutputChannel": null}\`
+Write \`prompt\` as a self-contained instruction for a future run that has no chat context. There is no edit action: to change a job, remove it and add it again.
+
+## Limits and failures
+- Five-field cron only (minute hour day month weekday); second-level schedules are rejected unless enabled. Times use the IANA \`timezone\` (default from config).
+- Names must be unique (case-insensitive, \`CRONJOB_ALREADY_EXISTS\` / \`CRONJOB_OPERATION_FAILED\`); the job count is capped (default 100).
+- \`remove\` is permanent: confirm with the user before removing jobs they did not name explicitly.
+`;
 
 const manifest: CapabilityManifest = {
   id: "cronjobs.manage",
@@ -214,7 +234,7 @@ export class CronjobAdapter
   private readonly preferredOutputChannel?: string;
   private readonly maxJobs: number;
   private readonly allowSeconds: boolean;
-  private readonly options: CronjobAdapterOptions;
+  private readonly userId?: string;
   private listening = false;
   private listener?: InputListener;
   private resolveStopped?: () => void;
@@ -222,13 +242,13 @@ export class CronjobAdapter
 
   constructor(options: CronjobAdapterOptions) {
     if (!options.database) throw new Error("CronjobAdapter requires database");
-    this.options = options;
     this.database = options.database;
     this.scheduler = options.scheduler ?? cron;
     this.defaultTimezone = optionalText(options.defaultTimezone) ?? "UTC";
     this.preferredOutputChannel = optionalText(options.preferredOutputChannel);
     this.maxJobs = positiveInteger(options.maxJobs, 100, "maxJobs");
     this.allowSeconds = options.allowSeconds ?? false;
+    this.userId = options.userId;
     validateTimezone(this.defaultTimezone);
     this.ready = this.initializeDatabase();
   }
@@ -241,7 +261,9 @@ export class CronjobAdapter
       this.resolveStopped = resolve;
     });
     try {
-      await this.reconcileTasks();
+      for (const job of await this.listCronjobs()) {
+        if (job.status === "active") this.scheduleJob(job);
+      }
       await this.stopped;
     } catch (error) {
       await this.stop();
@@ -274,12 +296,9 @@ export class CronjobAdapter
       switch (input.action) {
         case "add": {
           const job = await this.addCronjob({
-            name: requiredText(input.name ?? undefined, "name"),
-            cronExpression: requiredText(
-              input.cronExpression ?? undefined,
-              "cronExpression",
-            ),
-            prompt: requiredText(input.prompt ?? undefined, "prompt"),
+            name: requiredText(input.name, "name"),
+            cronExpression: requiredText(input.cronExpression, "cronExpression"),
+            prompt: requiredText(input.prompt, "prompt"),
             timezone: input.timezone ?? undefined,
             preferredOutputChannel: input.preferredOutputChannel ?? undefined,
           });
@@ -322,6 +341,14 @@ export class CronjobAdapter
         error instanceof Error ? error.message : "Cron job operation failed",
       );
     }
+  }
+
+  uiComponents() {
+    return [CRONJOB_OPENUI];
+  }
+
+  docs(): string {
+    return DOCS;
   }
 
   async microfrontendData(): Promise<CronjobMicrofrontendData> {
@@ -458,14 +485,6 @@ export class CronjobAdapter
     return jobs.find((job) => job.name.toLowerCase() === target.toLowerCase());
   }
 
-  private async reconcileTasks(): Promise<void> {
-    for (const task of this.tasks.values()) task.destroy();
-    this.tasks.clear();
-    for (const job of await this.listCronjobs()) {
-      if (job.status === "active") this.scheduleJob(job);
-    }
-  }
-
   private validateSchedule(expression: string, timezone: string): void {
     const fieldCount = expression.trim().split(/\s+/).length;
     if (fieldCount !== 5 && !(this.allowSeconds && fieldCount === 6)) {
@@ -510,7 +529,6 @@ export class CronjobAdapter
         lastError: message,
         updatedAt: new Date(),
       });
-      await this.options.onError?.(error, job);
     }
   }
 
@@ -518,8 +536,8 @@ export class CronjobAdapter
     return {
       id: `input-${randomUUID()}`,
       channel: this.channel,
-      sessionId: this.options.sessionId ?? `cronjob-${job.id}`,
-      ...(this.options.userId ? { userId: this.options.userId } : {}),
+      sessionId: `cronjob-${job.id}`,
+      ...(this.userId ? { userId: this.userId } : {}),
       text: scheduledPromptText(job, triggeredAt),
       createdAt: triggeredAt,
       metadata: {
@@ -553,7 +571,7 @@ export class CronjobAdapter
     verb: string,
     change: (target: string) => Promise<Cronjob | undefined>,
   ): Promise<CapabilityResult<ManageCronjobsOutput>> {
-    const target = requiredText(idOrName ?? undefined, "idOrName");
+    const target = requiredText(idOrName, "idOrName");
     const job = await change(target);
     return job
       ? success(`Cron job "${job.name}" ${verb}`, job)
@@ -639,7 +657,7 @@ function scheduledPromptText(job: Cronjob, triggeredAt: Date): string {
   ].join("\n");
 }
 
-function requiredText(value: string | undefined, field: string): string {
+function requiredText(value: string | null | undefined, field: string): string {
   const normalized = value?.trim();
   if (!normalized) throw new Error(`Input '${field}' is required`);
   return normalized;

@@ -25,7 +25,6 @@ const DEFAULT_CHAT_PATHS = [
   "/api/v1/chat/completions",
 ] as const;
 
-/** OpenAI/OpenRouter-compatible HTTP input and output adapter. */
 export class OpenRouterApiInput implements InputInterface, OutputInterface {
   readonly channel = "openrouter-api" as const;
   readonly description =

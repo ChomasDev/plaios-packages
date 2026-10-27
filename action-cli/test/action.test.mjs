@@ -33,3 +33,22 @@ test("advertises the configured allowlist and still enforces it", async () => {
   assert.equal(result.success, false);
   if (!result.success) assert.equal(result.error.code, "COMMAND_NOT_ALLOWED");
 });
+
+test("rejects paths hidden in option values and files0-from lists", async () => {
+  const action = new RunCLICommandCapability({ env, cwd: process.cwd() });
+  for (const input of [
+    { command: "du", args: ["--files0-from=/etc/shadow"] },
+    { command: "du", args: ["--files0-from=.env"] },
+    { command: "find", args: ["-files0-from", ".env"] },
+    { command: "ls", args: ["--directory=../.."] },
+  ]) {
+    const result = await action.execute(input, context);
+    assert.equal(result.success, false, JSON.stringify(input));
+    if (!result.success) assert.equal(result.error.code, "ARGUMENT_NOT_ALLOWED");
+  }
+});
+
+test("describes only the allowlist to the model", () => {
+  const action = new RunCLICommandCapability({ env });
+  assert.doesNotMatch(action.manifest.description, /any CLI command|ssh/i);
+});

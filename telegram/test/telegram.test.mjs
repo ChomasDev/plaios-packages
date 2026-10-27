@@ -53,7 +53,7 @@ test("keeps a session, maps users, and rotates the session on /new", async () =>
       const method = String(input).split("/").at(-1);
       const body = JSON.parse(String(init?.body));
 
-      if (method === "sendMessage") {
+      if (method === "sendMessage" || method === "sendChatAction") {
         sent.push(body);
         return jsonResponse({ ok: true });
       }
@@ -99,10 +99,124 @@ test("keeps a session, maps users, and rotates the session on /new", async () =>
     ],
   );
   assert.deepEqual(sent, [
+    { chat_id: "123", action: "typing" },
     { chat_id: "123", text: "reply: hello" },
     { chat_id: "123", text: "Started a new conversation." },
+    { chat_id: "123", action: "typing" },
     { chat_id: "123", text: "reply: hello again" },
   ]);
+});
+
+test("refreshes typing during a long request and stops after it finishes", async () => {
+  const actions = [];
+  let updatesReturned = false;
+  let finishWork;
+  let startedWork;
+  const workStarted = new Promise((resolve) => { startedWork = resolve; });
+  const workFinished = new Promise((resolve) => { finishWork = resolve; });
+
+  const adapter = new TelegramAdapter({
+    botToken: "bot-token",
+    chatId: "123",
+    pollTimeoutSeconds: 0,
+    fetch: async (input, init) => {
+      const method = String(input).split("/").at(-1);
+      if (method === "sendChatAction") {
+        actions.push(JSON.parse(String(init?.body)));
+        return jsonResponse({ ok: true, result: true });
+      }
+      if (updatesReturned) return jsonResponse({ ok: true, result: [] });
+      updatesReturned = true;
+      return jsonResponse({ ok: true, result: [update(1, 10, "long task")] });
+    },
+  });
+
+  const listening = adapter.start(async () => {
+    startedWork();
+    await workFinished;
+    await adapter.stop();
+  });
+  await workStarted;
+  assert.deepEqual(actions, [{ chat_id: "123", action: "typing" }]);
+  await new Promise((resolve) => setTimeout(resolve, 4_100));
+  assert.equal(actions.length, 2);
+  finishWork();
+  await listening;
+  assert.equal(actions.length, 2);
+});
+
+test("keeps processing when Telegram rejects a typing action", async () => {
+  let updatesReturned = false;
+  const sent = [];
+  const errors = [];
+  let finishWork;
+  let reportError;
+  const workFinished = new Promise((resolve) => { finishWork = resolve; });
+  const errorReported = new Promise((resolve) => { reportError = resolve; });
+  const adapter = new TelegramAdapter({
+    botToken: "bot-token",
+    chatId: "123",
+    pollTimeoutSeconds: 0,
+    onError: (error) => { errors.push(error); reportError(); },
+    fetch: async (input, init) => {
+      const method = String(input).split("/").at(-1);
+      if (method === "sendChatAction") {
+        return new Response(JSON.stringify({ ok: false, description: "unavailable" }), { status: 503 });
+      }
+      if (method === "sendMessage") {
+        sent.push(JSON.parse(String(init?.body)));
+        return jsonResponse({ ok: true });
+      }
+      if (updatesReturned) return jsonResponse({ ok: true, result: [] });
+      updatesReturned = true;
+      return jsonResponse({ ok: true, result: [update(1, 10, "hello")] });
+    },
+  });
+
+  const listening = adapter.start(async () => {
+    await workFinished;
+    await adapter.write("reply");
+    await adapter.stop();
+  });
+  await errorReported;
+  finishWork();
+  await listening;
+
+  assert.deepEqual(sent, [{ chat_id: "123", text: "reply" }]);
+  assert.equal(errors.length, 1);
+});
+
+test("does not wait for a stalled typing request", async () => {
+  let updatesReturned = false;
+  let aborted = false;
+  let processed = false;
+  const adapter = new TelegramAdapter({
+    botToken: "bot-token",
+    chatId: "123",
+    pollTimeoutSeconds: 0,
+    fetch: async (input, init) => {
+      const method = String(input).split("/").at(-1);
+      if (method === "sendChatAction") {
+        return new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            aborted = true;
+            reject(new Error("aborted"));
+          }, { once: true });
+        });
+      }
+      if (updatesReturned) return jsonResponse({ ok: true, result: [] });
+      updatesReturned = true;
+      return jsonResponse({ ok: true, result: [update(1, 10, "hello")] });
+    },
+  });
+
+  await adapter.start(async () => {
+    processed = true;
+    await adapter.stop();
+  });
+
+  assert.equal(processed, true);
+  assert.equal(aborted, true);
 });
 
 test("downloads image input and removes its temporary file afterward", async () => {
@@ -168,6 +282,37 @@ test("downloads image input and removes its temporary file afterward", async () 
     },
   ]);
   await assert.rejects(access(received[0]?.path ?? ""));
+});
+
+test("tells the user when answering fails instead of staying silent", async () => {
+  const sent = [];
+  const errors = [];
+  let updatesReturned = false;
+  const adapter = new TelegramAdapter({
+    botToken: "bot-token",
+    chatId: "123",
+    pollTimeoutSeconds: 0,
+    onError: (error) => { errors.push(error); },
+    fetch: async (input, init) => {
+      const method = String(input).split("/").at(-1);
+      const body = JSON.parse(String(init?.body));
+      if (method === "sendMessage") sent.push(body.text);
+      if (method !== "getUpdates") return jsonResponse({ ok: true });
+      if (updatesReturned) {
+        await adapter.stop();
+        return jsonResponse({ ok: true, result: [] });
+      }
+      updatesReturned = true;
+      return jsonResponse({ ok: true, result: [update(1, 10, "hello")] });
+    },
+  });
+
+  await adapter.start(async () => {
+    throw new Error("refresh token was revoked");
+  });
+
+  assert.deepEqual(sent, ["Sorry, I could not answer that: refresh token was revoked"]);
+  assert.equal(errors[0]?.message, "refresh token was revoked");
 });
 
 function update(updateId, messageId, text) {

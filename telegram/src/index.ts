@@ -1,7 +1,10 @@
-export { TelegramAdapter, TelegramInput } from "./input.js";
+export {
+  TelegramAdapter,
+  TelegramAdapter as TelegramInput,
+  TelegramAdapter as TelegramOutput,
+} from "./telegram-adapter.js";
 export type {
   TelegramAdapterOptions,
-  TelegramInputOptions,
-} from "./input.js";
-export { TelegramOutput } from "./output.js";
-export type { TelegramOutputOptions } from "./output.js";
+  TelegramAdapterOptions as TelegramInputOptions,
+  TelegramAdapterOptions as TelegramOutputOptions,
+} from "./types.js";

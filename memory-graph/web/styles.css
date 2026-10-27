@@ -90,3 +90,26 @@
   .graph-stage { min-height: 30rem; }
   .graph-spatial-status { display: none; }
 }
+
+/* Chat preview (OpenUI MemoryGraph): subgraph on the left, the node and its links on the right. */
+/* Breaks out of the chat column: as wide as the viewport allows, centred under the answer. */
+.graph-preview-wide { width: min(calc(100vw - 3rem), 72rem); margin-left: 50%; transform: translateX(-50%); }
+.graph-preview { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(16rem, 0.7fr); border: 1px solid var(--border); border-radius: 1rem; overflow: hidden; background: var(--card); }
+.graph-preview-canvas { position: relative; min-height: 28rem; border-right: 1px solid var(--border); }
+.graph-preview-canvas > * { position: absolute; inset: 0; }
+.graph-preview-side { display: grid; align-content: start; gap: .5rem; padding: 1rem 1.1rem; }
+.graph-preview-type { margin: 0; color: var(--muted-foreground); font: 600 .6rem/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .12em; text-transform: uppercase; }
+.graph-preview-side { min-width: 0; }
+.graph-preview-side h4 { margin: 0; font-size: .95rem; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.graph-preview-meta { margin: 0 0 .5rem; color: var(--muted-foreground); font-size: .75rem; }
+.graph-preview-side ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: .15rem; }
+.graph-preview-side li { min-width: 0; }
+.graph-preview-canvas { min-width: 0; overflow: hidden; }
+.graph-preview-side li button { display: flex; align-items: center; gap: .5rem; width: 100%; padding: .35rem .5rem; border: 0; border-radius: .5rem; background: none; color: inherit; font-size: .8rem; text-align: left; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.graph-preview-side li button:hover { background: color-mix(in oklch, var(--muted) 70%, transparent); }
+.graph-preview-dot { width: .45rem; height: .45rem; flex: none; border-radius: 999px; background: #34d399; }
+.graph-preview-dot[data-type="memory"] { background: #60a5fa; }
+.graph-preview-open { margin-top: .5rem; justify-self: start; border: 1px solid var(--border); border-radius: 999px; background: var(--card); color: var(--foreground); padding: .35rem .9rem; font-size: .8rem; cursor: pointer; }
+.graph-preview-open:hover { border-color: var(--foreground); }
+.graph-preview-empty { padding: 1rem 1.25rem; font-size: .875rem; color: var(--muted-foreground); }
+@media (max-width: 48rem) { .graph-preview { grid-template-columns: 1fr; } .graph-preview-canvas { border-right: 0; border-bottom: 1px solid var(--border); min-height: 20rem; } }

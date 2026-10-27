@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { Codex, type ApprovalMode, type CodexOptions, type Input as CodexInput, type ModelReasoningEffort, type SandboxMode, type WebSearchMode } from "@openai/codex-sdk";
-import type { AIExecutableFunctionDefinition, AIFunctionCallResult, AIFunctionDefinition, AIFunctionProcessOptions, AIInput, AIModelSettings, AIProcessOptions, AIProcessResult, AIProvider, JsonSchema } from "@agent-os/core";
+import type { AIExecutableFunctionDefinition, AIFunctionCallResult, AIFunctionDefinition, AIFunctionProcessOptions, AIInput, AIModelSettings, AIProcessOptions, AIProcessResult, JsonSchema, System2, SystemAnswers, SystemAskOptions, SystemQuestions } from "@agent-os/core";
+import { askWithFunctionCall } from "@agent-os/systems";
 import { PersistentCodexAppServer, type PersistentThreadOptions } from "./persistent-app-server.js";
 
 export interface CodexProviderOptions {
@@ -9,7 +10,6 @@ export interface CodexProviderOptions {
   baseUrl?: string;
   settings?: AIModelSettings;
   workingDirectory?: string;
-  cwd?: string;
   skipGitRepoCheck?: boolean;
   sandboxMode?: SandboxMode;
   approvalPolicy?: ApprovalMode;
@@ -29,13 +29,12 @@ const providerInstructions = [
   "Use only the request and the Agent OS capabilities explicitly described in it.",
 ].join(" ");
 
-export class CodexProvider implements AIProvider {
+export class CodexProvider implements System2 {
   readonly provider = "codex" as const;
   readonly model: string;
   readonly settings: Readonly<AIModelSettings>;
   private readonly codex: Codex | PersistentCodexAppServer;
   private readonly threadOptions: PersistentThreadOptions;
-  private readonly persistentProcess: boolean;
   private readonly status: {
     credentialMode: "api-key" | "codex-session";
     workingDirectory: string;
@@ -50,7 +49,7 @@ export class CodexProvider implements AIProvider {
   constructor(options: CodexProviderOptions) {
     const model = options.model?.trim();
     if (!model) throw new Error("CodexProvider model is required");
-    const workingDirectory = options.workingDirectory ?? options.cwd ?? process.cwd();
+    const workingDirectory = options.workingDirectory ?? process.cwd();
     const sandboxMode = options.sandboxMode ?? "read-only";
     const approvalPolicy = options.approvalPolicy ?? "never";
     const networkAccessEnabled = options.networkAccessEnabled ?? false;
@@ -58,7 +57,6 @@ export class CodexProvider implements AIProvider {
     const persistentProcess = options.persistentProcess ?? true;
     this.model = model;
     this.settings = Object.freeze({ ...options.settings });
-    this.persistentProcess = persistentProcess;
     this.codex = persistentProcess
       ? new PersistentCodexAppServer({ apiKey: options.apiKey, baseUrl: options.baseUrl, codexPathOverride: options.codexPathOverride, config: options.config })
       : new Codex({ apiKey: options.apiKey, baseUrl: options.baseUrl, codexPathOverride: options.codexPathOverride, config: options.config });
@@ -76,6 +74,10 @@ export class CodexProvider implements AIProvider {
     if (options.stream) return { type: "stream", stream: streamText(thread, prompt, resolveSignal(this.settings, options)) };
     const result = await thread.run(prompt, { signal: resolveSignal(this.settings, options) });
     return { type: "text", text: result.finalResponse };
+  }
+
+  ask(state: Record<string, unknown>, questions: SystemQuestions, options?: SystemAskOptions): Promise<SystemAnswers> {
+    return askWithFunctionCall(this, state, questions, options);
   }
 
   async functionCall<TArguments>(input: string, definition: AIFunctionDefinition<TArguments>, options: Omit<AIProcessOptions, "stream"> = {}): Promise<AIFunctionCallResult<TArguments>> {
@@ -96,7 +98,7 @@ export class CodexProvider implements AIProvider {
   }
 
   async close(): Promise<void> {
-    if (this.persistentProcess) await (this.codex as PersistentCodexAppServer).close();
+    if (this.codex instanceof PersistentCodexAppServer) await this.codex.close();
   }
 
   private startThread(): RunnableThread { return this.codex.startThread(this.threadOptions) as RunnableThread; }
@@ -107,9 +109,16 @@ export class CodexProvider implements AIProvider {
     const maxSteps = Math.max(1, options.maxSteps ?? 100);
     let prompt: CodexInput = createCodexInput(input, options.instructions, createFunctionInstructions(definitions));
     for (let step = 0; step < maxSteps; step += 1) {
-      const result = await thread.run(prompt, { outputSchema: schema, signal: resolveSignal(this.settings, options) });
-      const requested = parseFunctionStep(result.finalResponse);
-      if (requested.type === "text") { if (typeof requested.text !== "string") throw new Error("Codex returned a final step without text"); yield requested.text; return; }
+      // Stream the final answer's `text` field while the step JSON is still arriving; tool-call steps stay buffered.
+      let finalResponse = "";
+      let sent = 0;
+      for await (const text of agentMessages(thread, prompt, { outputSchema: schema, signal: resolveSignal(this.settings, options) })) {
+        finalResponse = text;
+        const decoded = partialFinalText(text);
+        if (decoded !== undefined && decoded.length > sent) { yield decoded.slice(sent); sent = decoded.length; }
+      }
+      const requested = parseFunctionStep(finalResponse);
+      if (requested.type === "text") { if (typeof requested.text !== "string") throw new Error("Codex returned a final step without text"); const rest = requested.text.slice(sent); if (rest) yield rest; return; }
       const definition = definitions.find((candidate) => candidate.name === requested.name);
       if (!definition) throw new Error(`Codex requested unknown function "${requested.name}"`);
       const output = await definition.execute(requested.arguments, { callId: `codex-${randomUUID()}`, signal: options.signal });
@@ -122,8 +131,6 @@ export class CodexProvider implements AIProvider {
     throw new Error(`Codex exceeded the ${maxSteps}-step function-call limit`);
   }
 }
-
-export { CodexProvider as AICodexProvider };
 
 function createPrompt(input: string, instructions?: string, taskInstructions?: string): string {
   const normalized = input.trim();
@@ -186,6 +193,49 @@ function validateDefinition(definition: AIFunctionDefinition): void { if (!/^[a-
 function parseJson<T>(value: string, label: string): T { try { return JSON.parse(value) as T; } catch (error) { throw new Error(`Codex returned invalid JSON for ${label}`, { cause: error }); } }
 function serialize(value: unknown): string { try { return JSON.stringify(value, null, 2) ?? String(value); } catch { return String(value); } }
 function resolveSignal(defaults: Readonly<AIModelSettings>, options: Pick<AIProcessOptions, "settings" | "signal">): AbortSignal | undefined { const timeoutMs = options.settings?.timeoutMs ?? defaults.timeoutMs; const timeoutSignal = timeoutMs === undefined ? undefined : AbortSignal.timeout(Math.max(1, timeoutMs)); if (options.signal && timeoutSignal) return AbortSignal.any([options.signal, timeoutSignal]); return options.signal ?? timeoutSignal; }
-interface RunnableThread { run(input: CodexInput, options?: { outputSchema?: unknown; signal?: AbortSignal }): Promise<{ finalResponse: string }>; }
-async function* streamText(thread: RunnableThread, input: CodexInput, signal?: AbortSignal): AsyncGenerator<string> { const result = await thread.run(input, { signal }); if (result.finalResponse) yield result.finalResponse; }
+interface RunOptions { outputSchema?: unknown; signal?: AbortSignal }
+interface ThreadEvent { type: string; item?: { type: string; text?: string }; error?: { message: string }; message?: string }
+interface RunnableThread {
+  run(input: CodexInput, options?: RunOptions): Promise<{ finalResponse: string }>;
+  runStreamed?(input: CodexInput, options?: RunOptions): Promise<{ events: AsyncIterable<ThreadEvent> }>;
+}
+
+/** Yields the agent's message text as it grows; the last value is the complete response. */
+async function* agentMessages(thread: RunnableThread, input: CodexInput, options: RunOptions): AsyncGenerator<string> {
+  if (!thread.runStreamed) { yield (await thread.run(input, options)).finalResponse; return; }
+  let last = "";
+  for await (const event of (await thread.runStreamed(input, options)).events) {
+    if (event.type === "turn.failed") throw new Error(event.error?.message ?? "Codex turn failed");
+    if (event.type === "error") throw new Error(event.message ?? "Codex stream error");
+    if ((event.type === "item.updated" || event.type === "item.completed") && event.item?.type === "agent_message" && typeof event.item.text === "string") {
+      last = event.item.text;
+      yield last;
+    }
+  }
+}
+
+async function* streamText(thread: RunnableThread, input: CodexInput, signal?: AbortSignal): AsyncGenerator<string> {
+  let sent = 0;
+  for await (const text of agentMessages(thread, input, { signal })) { if (text.length > sent) { yield text.slice(sent); sent = text.length; } }
+}
+
+/** Decodes the `text` of an incomplete `{"type":"text", ...}` step so it can stream; undefined until the step is known to be text. */
+export function partialFinalText(json: string): string | undefined {
+  if (!/^\s*\{\s*"type"\s*:\s*"text"/.test(json)) return undefined;
+  const match = /"text"\s*:\s*"/.exec(json);
+  if (!match) return "";
+  const escapes: Record<string, string> = { n: "\n", t: "\t", r: "\r", b: "\b", f: "\f" };
+  let out = "";
+  for (let index = match.index + match[0].length; index < json.length; index += 1) {
+    const char = json[index]!;
+    if (char === '"') return out;
+    if (char !== "\\") { out += char; continue; }
+    const next = json[index + 1];
+    if (next === undefined) return out;
+    if (next === "u") { const hex = json.slice(index + 2, index + 6); if (hex.length < 4) return out; out += String.fromCharCode(parseInt(hex, 16)); index += 5; continue; }
+    out += escapes[next] ?? next;
+    index += 1;
+  }
+  return out;
+}
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }

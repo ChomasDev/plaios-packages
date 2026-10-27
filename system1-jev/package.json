@@ -1,0 +1,56 @@
+{
+  "name": "@agent-os/system1-jev",
+  "version": "0.2.0",
+  "description": "TypeSafe Jev System 1 for Agent OS",
+  "keywords": [
+    "agent-os",
+    "system1",
+    "jev",
+    "typesafe"
+  ],
+  "private": false,
+  "type": "module",
+  "files": [
+    "dist",
+    "web/styles.css",
+    "agent-os.package.yaml"
+  ],
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    },
+    "./web/system1": {
+      "types": "./dist/web/system1/index.d.ts",
+      "import": "./dist/web/system1/index.js"
+    },
+    "./web/styles.css": "./web/styles.css"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "pnpm build && node --test test/**/*.test.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@agent-os/core": "workspace:*",
+    "@typesafe-ai/sdk": "^0.6.0",
+    "@agent-os/microfrontend": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "typescript": "7.0.2",
+    "@types/react": "^19.0.0",
+    "react": "19.2.4"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "react": ">=19.0.0"
+  }
+}

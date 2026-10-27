@@ -1,0 +1,81 @@
+{
+  "name": "@agent-os/action-gods-eye-view",
+  "version": "0.8.0",
+  "description": "A native Mapbox 3D globe for Agent OS with AI control and progressive geospatial layers",
+  "keywords": [
+    "agent-os",
+    "capability",
+    "action",
+    "webview",
+    "macos",
+    "geospatial",
+    "cctv",
+    "gods-eye-view"
+  ],
+  "private": false,
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "files": [
+    "dist",
+    "web",
+    "vendor/gods-eye-view",
+    "agent-os.package.yaml",
+    "README.md"
+  ],
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    },
+    "./web/action": {
+      "types": "./dist/web/action/index.d.ts",
+      "import": "./dist/web/action/index.js"
+    },
+    "./web/styles.css": "./web/styles.css"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "pnpm build && node --test test/**/*.test.mjs",
+    "test:upstream": "pnpm --dir vendor/gods-eye-view test",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@agent-os/action-ssh": "workspace:*",
+    "@agent-os/core": "workspace:*",
+    "@agent-os/microfrontend": "workspace:*",
+    "@mapbox/vector-tile": "^3.0.0",
+    "cesium": "^1.124.0",
+    "egm96-universal": "^1.1.1",
+    "mapbox-gl": "^3.31.0",
+    "mgrs": "^2.1.1",
+    "pbf": "^5.1.2",
+    "satellite.js": "^6.0.2",
+    "vite": "^6.0.0",
+    "vite-plugin-cesium": "^1.2.23"
+  },
+  "peerDependencies": {
+    "react": ">=19.0.0"
+  },
+  "devDependencies": {
+    "@cesium/engine": "^26.3.0",
+    "@types/node": "24.13.3",
+    "@types/react": "^19.0.0",
+    "prettier": "3.9.6",
+    "puppeteer": "^25.10.0",
+    "react": "19.2.4",
+    "sharp": "^0.35.4",
+    "three": "^0.186.0",
+    "typescript": "7.0.2",
+    "ws": "^8.21.0"
+  },
+  "engines": {
+    "node": ">=24.7.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

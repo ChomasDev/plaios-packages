@@ -1,9 +1,6 @@
 export { GraphMemory } from "./graph-memory.js";
-export type {
-  GraphMemoryOptions,
-  GraphWriteInput,
-  GraphWriteOutput,
-} from "./graph-memory.js";
+export type { GraphWriteInput, GraphWriteOutput } from "./graph-memory.js";
+export type { GraphMemoryOptions } from "./options.js";
 export { DefaultEntityExtractor } from "./entity-extractor.js";
 export { HashEmbeddingProvider } from "./hash-embedding.js";
 export {

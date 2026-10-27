@@ -26,6 +26,10 @@ export class TelegramApi {
     await this.call("sendMessage", { chat_id: chatId, text });
   }
 
+  async sendTyping(chatId: string, signal?: AbortSignal): Promise<void> {
+    await this.call("sendChatAction", { chat_id: chatId, action: "typing" }, signal);
+  }
+
   async downloadFile(
     fileId: string,
     maxBytes: number,

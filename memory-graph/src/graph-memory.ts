@@ -22,6 +22,7 @@ import {
 } from "./options.js";
 import type { GraphData } from "./graph-view-model.js";
 import type { GraphEdge, GraphNode, NodeType } from "./types.js";
+import { MEMORY_GRAPH_OPENUI } from "./openui.js";
 
 export interface GraphWriteInput {
   nodes: Array<{
@@ -44,6 +45,29 @@ export interface GraphWriteOutput {
   nodes: Array<{ ref: string; id: string; type: string; label: string }>;
   edges: Array<{ id?: string; sourceId: string; targetId: string; type: string }>;
 }
+
+const DOCS = `# memory_graph_write
+
+Creates or updates durable, user-scoped entities (nodes) and explicit relationships (edges) in the graph memory. Reusing the same \`type\` and \`label\` updates the existing node instead of duplicating it; attributes are merged in as key/value facts.
+
+## When to use
+- The user asks you to remember something: a person, place, event, project, protocol, a preference, or how named entities are connected.
+- Not for reading memory: use \`memory_retrieval\` to search, or the \`MemoryGraph\` chat component to show it.
+- Do not store transient chat details or secrets (passwords, tokens) unless the user explicitly asks.
+
+## Inputs
+Every endpoint of an edge must be a node in the same call; edges point to nodes by \`ref\`.
+- \`{"nodes": [{"ref": "anna", "type": "people", "label": "Anna", "attributes": [{"key": "role", "value": "designer"}], "weight": null, "factDate": null}], "edges": []}\`
+- \`{"nodes": [{"ref": "v", "type": "people", "label": "Valentina", "attributes": [], "weight": null, "factDate": null}, {"ref": "a", "type": "people", "label": "Alex", "attributes": [], "weight": null, "factDate": null}], "edges": [{"sourceRef": "v", "targetRef": "a", "type": "friend-of", "weight": null}]}\`
+Use canonical labels (full names as the user says them) so later writes hit the same node; set \`factDate\` (ISO-8601) when the fact has a date.
+
+## Chat components
+After answering "who is X" / "what do you know about Y" from memory, add \`MemoryGraph("X")\` to the answer so the user can explore it; it needs no tool call.
+
+## Limits and failures
+- 1-25 nodes, up to 50 edges, up to 25 attributes per node; edge weight 0-1. Violations return \`VALIDATION_ERROR\` with the reason: fix the input and retry.
+- \`GRAPH_WRITE_FAILED\` is retryable (storage error). Writes are idempotent for the same type and label.
+`;
 
 const graphWriteManifest: CapabilityManifest = {
   id: "memory.graph.write",
@@ -148,10 +172,6 @@ const graphWriteManifest: CapabilityManifest = {
   ],
 };
 
-/**
- * Weighted property-graph memory. This facade preserves the generic Memory
- * contract while delegating storage, retrieval, and writes to focused modules.
- */
 export class GraphMemory implements Memory, Capability<GraphWriteInput, GraphWriteOutput> {
   readonly manifest = graphWriteManifest;
   private readonly config: ResolvedGraphOptions;
@@ -313,6 +333,11 @@ export class GraphMemory implements Memory, Capability<GraphWriteInput, GraphWri
       }
     }
 
+    const metadata = {
+      namespace: "user-memory",
+      sourceChannel: context.metadata?.channel,
+      sourceMessageId: context.metadata?.inputMessageId,
+    };
     try {
       const nodes: GraphWriteOutput["nodes"] = [];
       const ids = new Map<string, string>();
@@ -328,11 +353,7 @@ export class GraphMemory implements Memory, Capability<GraphWriteInput, GraphWri
           ...(context.userId ? { userId: context.userId } : {}),
           ...(context.sessionId ? { sessionId: context.sessionId } : {}),
           kind: "semantic",
-          metadata: {
-            namespace: "user-memory",
-            sourceChannel: context.metadata?.channel,
-            sourceMessageId: context.metadata?.inputMessageId,
-          },
+          metadata,
         });
         ids.set(ref, node.id);
         nodes.push({ ref, id: node.id, type: node.type, label: node.label });
@@ -345,11 +366,7 @@ export class GraphMemory implements Memory, Capability<GraphWriteInput, GraphWri
           targetId: ids.get(inputEdge.targetRef)!,
           type: inputEdge.type.trim(),
           ...(inputEdge.weight === null ? {} : { weight: inputEdge.weight }),
-          metadata: {
-            namespace: "user-memory",
-            sourceChannel: context.metadata?.channel,
-            sourceMessageId: context.metadata?.inputMessageId,
-          },
+          metadata,
         });
         edges.push({ id: edge.id, sourceId: edge.sourceId, targetId: edge.targetId, type: edge.type });
       }
@@ -361,6 +378,14 @@ export class GraphMemory implements Memory, Capability<GraphWriteInput, GraphWri
         true,
       );
     }
+  }
+
+  uiComponents() {
+    return [MEMORY_GRAPH_OPENUI];
+  }
+
+  docs(): string {
+    return DOCS;
   }
 
   async microfrontendData(): Promise<GraphData> {
@@ -400,6 +425,7 @@ export class GraphMemory implements Memory, Capability<GraphWriteInput, GraphWri
       this.store.edges(),
     ]);
     const nodeLimit = 2_000;
+    const now = this.config.clock();
     const nodes = storedNodes
       .slice()
       .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
@@ -409,7 +435,7 @@ export class GraphMemory implements Memory, Capability<GraphWriteInput, GraphWri
         type: node.type,
         label: node.label,
         kind: node.kind ?? undefined,
-        weight: this.retriever.weight(node, this.config.clock()),
+        weight: this.retriever.weight(node, now),
         userId: node.userId ?? undefined,
         sessionId: node.sessionId ?? undefined,
         createdAt: node.createdAt.toISOString(),
@@ -425,13 +451,7 @@ export class GraphMemory implements Memory, Capability<GraphWriteInput, GraphWri
       .filter(({ sourceId, targetId }) => visible.has(sourceId) && visible.has(targetId))
       .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime())
       .slice(0, 5_000)
-      .map(({ id, sourceId, targetId, type, weight }) => ({
-        id,
-        sourceId,
-        targetId,
-        type,
-        weight,
-      }));
+      .map(({ id, sourceId, targetId, type, weight }) => ({ id, sourceId, targetId, type, weight }));
     return {
       nodes,
       edges,
@@ -454,5 +474,3 @@ function graphWriteFailure(
 ): CapabilityResult<never> {
   return { success: false, error: { code, message, retryable } };
 }
-
-export type { GraphMemoryOptions } from "./options.js";

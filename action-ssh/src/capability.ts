@@ -14,7 +14,7 @@ import { remoteShellCommand, type RemoteAction, type RemoteCommandInput } from "
 import { findDevice, parseDevices, publicDevices, type PublicDevice, type RemoteDevice } from "./devices.js";
 import { runScp, runSsh, type ScpRunner, type SshRunner } from "./ssh.js";
 
-export interface SshControlInput extends RemoteCommandInput {}
+export type SshControlInput = RemoteCommandInput;
 
 export interface SshControlOutput {
   deviceId: string | null;
@@ -48,6 +48,30 @@ export interface SshCapabilityOptions {
   ssh?: SshRunner;
   scp?: ScpRunner;
 }
+
+const DOCS = `# control_remote_computer
+
+Structured control of paired Macs and Linux hosts over SSH: list devices, status, open/quit apps, open URLs, notify, lock or sleep/wake the display, set volume, speak, screenshot, and raw shell or AppleScript.
+
+## When to use
+- You already know the exact action and device, or you need \`exec\`/\`osascript\` with a precise command.
+- For a plain natural-language request ("apri Safari sul Mac") prefer \`control_remote_computer_jev\`: it parses the text itself and remembers user protocols.
+- Not for Home Assistant devices (lights, TV, cameras) or for commands on the Agent OS server itself (use the CLI capability).
+
+## Inputs
+- \`{"action": "list", "deviceId": null}\` to see paired computers (ids and names); call it first when unsure.
+- \`{"action": "open_app", "deviceId": "mac-studio", "app": "Safari"}\`
+- \`{"action": "exec", "deviceId": "mac-studio", "command": "df -h /"}\`
+\`deviceId\` accepts an id or a name. URLs go in \`command\` (or \`text\`), spoken/notification text in \`text\`, volume 0-100 in \`value\`.
+
+## Limits and failures
+- Each command times out (default 15s, call timeout 20s); output is truncated to \`maxOutputBytes\`.
+- \`open_app\`, \`quit_app\` and \`osascript\` are macOS-only; on Linux they fail with \`VALIDATION_ERROR\`.
+- Errors: \`NO_DEVICES\`, \`DEVICE_NOT_FOUND\` (the message lists paired names; ask the user which one), \`MISSING_KEY\`, \`SSH_FAILED\` (retryable: host offline or unreachable).
+- A non-zero exit is still a successful call: read \`summary\` and \`stderr\`.
+- There is no confirmation step: \`exec\` and \`osascript\` run immediately as the paired user. Ask the user before anything destructive (deleting files, shutdown, killing processes).
+- \`screenshot\` copies the image to the server and returns \`localPath\`.
+`;
 
 const manifest: CapabilityManifest = {
   id: "ssh.control",
@@ -125,6 +149,14 @@ export class SshCapability implements Capability<SshControlInput, SshControlOutp
     this.scp = options.scp ?? (options.ssh ? undefined : runScp);
   }
 
+  uiComponents() {
+    return [];
+  }
+
+  docs(): string {
+    return DOCS;
+  }
+
   listDevices(): RemoteDevice[] {
     return this.devices;
   }
@@ -190,7 +222,7 @@ export class SshCapability implements Capability<SshControlInput, SshControlOutp
     try {
       command = remoteShellCommand(device, input);
     } catch (error) {
-      return failure("VALIDATION_ERROR", error instanceof Error ? error.message : String(error));
+      return failure("VALIDATION_ERROR", errorMessage(error));
     }
 
     try {
@@ -215,11 +247,7 @@ export class SshCapability implements Capability<SshControlInput, SshControlOutp
         ...(fetched.localPath ? { localPath: fetched.localPath } : {}),
       });
     } catch (error) {
-      return failure(
-        "SSH_FAILED",
-        error instanceof Error ? error.message : String(error),
-        true,
-      );
+      return failure("SSH_FAILED", errorMessage(error), true);
     }
   }
 
@@ -232,17 +260,10 @@ export class SshCapability implements Capability<SshControlInput, SshControlOutp
     const remotePath = screenshotRemotePath(result.stdout);
     const localPath = join(tmpdir(), `agent-os-screenshot-${randomUUID()}.png`);
     try {
-      await this.scp({
-        device,
-        remotePath,
-        localPath,
-        timeoutMs: this.timeoutMs,
-      });
+      await this.scp({ device, remotePath, localPath, timeoutMs: this.timeoutMs });
       return { localPath };
     } catch (error) {
-      return {
-        error: error instanceof Error ? error.message : String(error),
-      };
+      return { error: errorMessage(error) };
     }
   }
 }
@@ -300,6 +321,10 @@ function success(data: SshControlOutput): CapabilityResult<SshControlOutput> {
   return { success: true, data };
 }
 
-function failure(code: string, message: string, retryable = false): CapabilityResult<never> {
+export function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+export function failure(code: string, message: string, retryable = false): CapabilityResult<never> {
   return { success: false, error: { code, message, retryable } };
 }

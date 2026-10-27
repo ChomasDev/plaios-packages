@@ -25,6 +25,7 @@ const defaultInstructions = [
   "You are Agent OS.",
   "Use an available capability whenever it can directly answer the request.",
   "For local filesystem or runtime questions, call the relevant capability instead of asking the user to run a command.",
+  "Before using a capability you are unsure about, or after one fails, call read_capability_docs with its id to read how it works.",
   "If the initial memory context is incomplete, call memory_retrieval with focused follow-up queries; call it more than once when different angles are needed.",
   "After receiving capability results, provide a concise final answer.",
 ].join(" ");
@@ -43,7 +44,8 @@ export class DefaultAgentLoop implements AgentLoop {
     this.maxCapabilities = Math.max(1, options.maxCapabilities ?? 50);
     this.maxSteps = Math.max(1, options.maxSteps ?? 100);
     this.instructions = options.instructions ?? defaultInstructions;
-    this.alwaysCapabilityIds = options.alwaysCapabilityIds ?? ["memory.retrieval"];
+    // `agent-os.docs` is built into the host: read_capability_docs explains any other capability.
+    this.alwaysCapabilityIds = options.alwaysCapabilityIds ?? ["memory.retrieval", "agent-os.docs"];
   }
 
   async run(
@@ -56,10 +58,7 @@ export class DefaultAgentLoop implements AgentLoop {
       type: "discovery.started",
       runId,
       at: new Date(),
-      query:
-        typeof message.metadata?.originalText === "string"
-          ? message.metadata.originalText
-          : message.text,
+      query: requestText(message),
     });
 
     // Orchestrator owns discovery/selection; the loop only loads by ID.
@@ -95,7 +94,7 @@ export class DefaultAgentLoop implements AgentLoop {
       return this.model.processInput(modelInput, {
         stream: options.stream,
         signal: options.signal,
-        instructions: this.instructions,
+        instructions: this.instructionsFor(message),
       });
     }
 
@@ -165,9 +164,15 @@ export class DefaultAgentLoop implements AgentLoop {
     return this.model.processWithFunctions(modelInput, functions, {
       stream: options.stream,
       signal: options.signal,
-      instructions: this.instructions,
+      instructions: this.instructionsFor(message),
       maxSteps: this.maxSteps,
     });
+  }
+
+  /** A channel may add per-message instructions, for example a UI language the web chat can render. */
+  private instructionsFor(message: InputMessage): string {
+    const extra = message.metadata?.instructions;
+    return typeof extra === "string" && extra ? `${this.instructions}\n\n${extra}` : this.instructions;
   }
 
   private async runDirect(
@@ -256,7 +261,7 @@ export class DefaultAgentLoop implements AgentLoop {
         {
           stream: options.stream,
           signal: options.signal,
-          instructions: this.instructions,
+          instructions: this.instructionsFor(message),
         },
       );
     }
@@ -289,11 +294,14 @@ function summarizeCapabilityResult(result: { success: boolean; data?: unknown; e
   return JSON.stringify(result.data ?? {}, null, 2);
 }
 
+// Hosts put the user's bare request in originalText when `text` carries a transcript.
+function requestText(message: InputMessage): string {
+  const original = message.metadata?.originalText;
+  return typeof original === "string" && original.trim() ? original : message.text;
+}
+
 function directCapabilityInput(message: InputMessage): { text: string; history?: Array<{ role: string; content: string }> } {
-  const text =
-    typeof message.metadata?.originalText === "string" && message.metadata.originalText.trim()
-      ? message.metadata.originalText
-      : message.text;
+  const text = requestText(message);
   const history = compactHistory(message.metadata?.conversationHistory);
   return history.length > 0 ? { text, history } : { text };
 }
@@ -337,22 +345,14 @@ function mediaTypeForPath(path: string): string {
 }
 
 function wantsVisualReport(message: InputMessage): boolean {
-  const text =
-    typeof message.metadata?.originalText === "string" && message.metadata.originalText.trim()
-      ? message.metadata.originalText
-      : message.text;
   return /\b(telegram|cosa vedi|che vedi|descrivi|descrizione|scrivimi|scrivermi|mandami|mandarmi|dimmi)\b/i.test(
-    text,
+    requestText(message),
   );
 }
 
 function visualReportPrompt(message: InputMessage, summary: string): string {
-  const text =
-    typeof message.metadata?.originalText === "string" && message.metadata.originalText.trim()
-      ? message.metadata.originalText
-      : message.text;
   return [
-    `The user said: "${text}"`,
+    `The user said: "${requestText(message)}"`,
     summary,
     "A screenshot was captured. Describe clearly what you see on the screen, in the user's language.",
     "Be specific about apps, windows, text, and layout. Do not mention file paths unless useful.",

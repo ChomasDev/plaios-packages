@@ -11,10 +11,11 @@ import type {
   DatabaseTableSchema,
 } from "@agent-os/core";
 
-import { SQLiteDatabaseAdmin } from "./admin.js";
+import { SQLiteDatabaseAdmin, type SQLiteExecuteOptions } from "./admin.js";
 import {
   applyDefaults,
   normalizeNamespace,
+  quote,
   safeIdentifier,
   sqliteType,
   validateStructure,
@@ -63,10 +64,8 @@ export class SQLiteDatabaseProvider implements DatabaseProvider {
           table: string,
           options?: { offset?: number; limit?: number },
         ) => this.admin.browseTable(table, options),
-        execute: (
-          sql: string,
-          options?: import("./admin.js").SQLiteExecuteOptions,
-        ) => this.admin.execute(sql, options),
+        execute: (sql: string, options?: SQLiteExecuteOptions) =>
+          this.admin.execute(sql, options),
       },
     };
   }
@@ -270,10 +269,6 @@ function decode(value: unknown, type?: string): unknown {
   if (type === "datetime") return new Date(String(value));
   if (type === "boolean") return Boolean(value);
   return value;
-}
-
-function quote(value: string): string {
-  return `"${value.replaceAll('"', '""')}"`;
 }
 
 function resolvePath(

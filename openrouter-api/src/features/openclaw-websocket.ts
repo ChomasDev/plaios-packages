@@ -8,6 +8,7 @@ import type {
 } from "@agent-os/core/domain";
 import { WebSocket, WebSocketServer } from "ws";
 import type { OpenRouterApiModel } from "./types.js";
+import { isRecord, normalizeText as textValue } from "./utils.js";
 
 type JsonRecord = Record<string, unknown>;
 type ChatMessage = {
@@ -399,14 +400,6 @@ function assistantMessage(text: string): ChatMessage {
 
 function userMessage(text: string): ChatMessage {
   return { role: "user", content: [{ type: "text", text }], timestamp: Date.now() };
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-function textValue(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
 function numberValue(value: unknown): number {

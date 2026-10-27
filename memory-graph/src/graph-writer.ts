@@ -1,5 +1,6 @@
 import type { MemoryEntry } from "@agent-os/core/domain";
 import {
+  asRecord,
   cloneEntry,
   edgeId,
   entityId,
@@ -111,12 +112,7 @@ export class GraphWriter {
       weightUpdatedAt: now,
     };
     await this.store.saveNode(stored);
-    await this.store.saveDetail(
-      id,
-      input.type,
-      isRecord(data) ? data : { value: data },
-      now,
-    );
+    await this.store.saveDetail(id, input.type, asRecord(data), now);
     return toGraphNode(stored, this.retriever.weight(stored, now));
   }
 
@@ -189,7 +185,6 @@ export class GraphWriter {
       });
     }
   }
-
 }
 
 function mergeData(current: unknown, incoming: unknown): unknown {

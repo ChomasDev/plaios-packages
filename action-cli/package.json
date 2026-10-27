@@ -1,6 +1,6 @@
 {
   "name": "@agent-os/action-cli",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Allowlisted, shell-free CLI inspection capability for Agent OS",
   "keywords": ["agent-os", "capability", "action", "cli", "inspection"],
   "private": false,

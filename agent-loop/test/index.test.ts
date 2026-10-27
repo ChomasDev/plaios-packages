@@ -14,6 +14,8 @@ test("always exposes memory retrieval and forwards message identity", async () =
   let executionContext: CapabilityExecutionContext | undefined;
   let modelInput: AIInput | undefined;
   const memoryCapability: Capability = {
+    uiComponents: () => [],
+    docs: () => "",
     manifest: memoryManifest,
     async execute(_input, context) {
       executionContext = context;
@@ -81,6 +83,8 @@ test("bypassModel executes the capability with raw text and skips the generative
   let modelCalls = 0;
   let received: unknown;
   const home: Capability = {
+    uiComponents: () => [],
+    docs: () => "",
     manifest: {
       id: "home-assistant.jev",
       name: "control_home_assistant_jev",
@@ -211,6 +215,8 @@ test("returns a protocol confirmation without calling a capability", async () =>
 test("after a screenshot, describes the image when the user asked what it sees", async () => {
   let modelInput: AIInput | undefined;
   const ssh: Capability = {
+    uiComponents: () => [],
+    docs: () => "",
     manifest: {
       id: "ssh.jev",
       name: "control_remote_computer_jev",

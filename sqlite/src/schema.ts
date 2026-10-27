@@ -61,3 +61,7 @@ export function sqliteType(type: string): string {
   if (type === "boolean") return "INTEGER";
   return "TEXT";
 }
+
+export function quote(value: string): string {
+  return `"${value.replaceAll('"', '""')}"`;
+}

@@ -14,7 +14,7 @@ export class HashEmbeddingProvider implements EmbeddingProvider {
 
   private embedOne(text: string): number[] {
     const vector = Array<number>(this.dimensions).fill(0);
-    const tokens = normalize(text).match(/[\p{L}\p{N}_'-]+/gu) ?? [];
+    const tokens = text.normalize("NFKC").toLowerCase().match(/[\p{L}\p{N}_'-]+/gu) ?? [];
     for (const token of tokens) {
       const hash = fnv1a(token);
       vector[hash % this.dimensions]! += (hash & 1) === 0 ? 1 : -1;
@@ -22,10 +22,6 @@ export class HashEmbeddingProvider implements EmbeddingProvider {
     const norm = Math.sqrt(vector.reduce((total, value) => total + value * value, 0));
     return norm === 0 ? vector : vector.map((value) => value / norm);
   }
-}
-
-function normalize(value: string): string {
-  return value.normalize("NFKC").toLowerCase();
 }
 
 function fnv1a(value: string): number {

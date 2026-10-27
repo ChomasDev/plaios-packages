@@ -1,6 +1,6 @@
 {
   "name": "@agent-os/action-perplexity-search",
-  "version": "0.1.1",
+  "version": "0.2.2",
   "description": "Live Perplexity web-search action for Agent OS",
   "keywords": ["agent-os", "capability", "action", "web", "search", "perplexity"],
   "private": false,

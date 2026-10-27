@@ -1,4 +1,6 @@
-import type { DatabaseSync, StatementResultingChanges } from "node:sqlite";
+import type { DatabaseSync } from "node:sqlite";
+
+import { quote } from "./schema.js";
 
 export interface SQLiteTableSummary {
   name: string;
@@ -189,7 +191,16 @@ export class SQLiteDatabaseAdmin implements SQLiteAdminClient {
     }
 
     const result = statement.run();
-    return changeResult(result, performance.now() - startedAt);
+    return {
+      kind: "changes",
+      columns: [],
+      rows: [],
+      changes: Number(result.changes),
+      lastInsertRowid: typeof result.lastInsertRowid === "bigint"
+        ? result.lastInsertRowid.toString()
+        : result.lastInsertRowid,
+      durationMs: performance.now() - startedAt,
+    };
   }
 
   private async requireTable(table: string): Promise<SQLiteTableSummary> {
@@ -197,22 +208,6 @@ export class SQLiteDatabaseAdmin implements SQLiteAdminClient {
     if (!found) throw new Error(`Unknown SQLite table: ${table}`);
     return found;
   }
-}
-
-function changeResult(
-  result: StatementResultingChanges,
-  durationMs: number,
-): SQLiteQueryResult {
-  return {
-    kind: "changes",
-    columns: [],
-    rows: [],
-    changes: Number(result.changes),
-    lastInsertRowid: typeof result.lastInsertRowid === "bigint"
-      ? result.lastInsertRowid.toString()
-      : result.lastInsertRowid,
-    durationMs,
-  };
 }
 
 function stripLeadingComments(sql: string): string {
@@ -226,8 +221,4 @@ function isReadOnlyStatement(sql: string): boolean {
 
 function clampInteger(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, Math.trunc(value)));
-}
-
-function quote(value: string): string {
-  return `"${value.replaceAll('"', '""')}"`;
 }

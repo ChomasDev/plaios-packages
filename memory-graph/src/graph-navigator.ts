@@ -1,4 +1,4 @@
-import { GraphRetriever } from "./graph-retriever.js";
+import { adjacentNodeId, GraphRetriever } from "./graph-retriever.js";
 import { GraphStore } from "./graph-store.js";
 import { toGraphNode } from "./node-mapper.js";
 import type { StoredNode } from "./internal-types.js";
@@ -45,13 +45,4 @@ export class GraphNavigator {
       .filter((node): node is StoredNode => node !== undefined)
       .map((node) => toGraphNode(node, this.retriever.weight(node, now)));
   }
-}
-
-function adjacentNodeId(
-  edge: { sourceId: string; targetId: string },
-  nodeId: string,
-): string | undefined {
-  if (edge.sourceId === nodeId) return edge.targetId;
-  if (edge.targetId === nodeId) return edge.sourceId;
-  return undefined;
 }

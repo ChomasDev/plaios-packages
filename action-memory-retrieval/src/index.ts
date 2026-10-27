@@ -45,6 +45,27 @@ const durableKinds: readonly MemoryKind[] = [
   "procedural",
 ];
 
+const DOCS = `# memory_retrieval
+
+Searches the user's persistent graph memory with a focused query during the current response. Results include content, kind, dates (\`addedMemoryDate\`, \`factDate\`), importance and graph scoring/relation metadata; when the memory supports it, the hits are linked to the current input message for provenance.
+
+## When to use
+- The memory context injected at the start is missing, ambiguous or too shallow for the question ("what did I tell you about Alessia's trip?").
+- Call it several times with different focused queries (names, places, synonyms, Italian and English) before saying you don't know.
+- Not for saving facts: use \`memory_graph_write\`. To show a person or topic visually, the \`MemoryGraph\` chat component is enough.
+
+## Inputs
+- \`{"query": "Alessia terza stagione eventi", "limit": null, "kinds": null}\`
+- \`{"query": "procedura backup server", "limit": 10, "kinds": ["procedural"]}\`
+Write keyword-dense queries about the missing piece, not the whole user question. \`kinds\`: semantic (facts), episodic (events), procedural (how-tos); null searches all.
+
+## Limits and failures
+- Results are scoped to the current user; \`limit\` is clamped to the configured maximum (default 20, max 50). Timeout 10s.
+- An empty \`results\` list means nothing relevant is stored: say so instead of guessing.
+- Prefer \`factDate\` over \`addedMemoryDate\` when reasoning about when something happened.
+- \`MEMORY_RETRIEVAL_FAILED\` is retryable.
+`;
+
 const manifest: CapabilityManifest = {
   id: "memory.retrieval",
   version: "1.0.0",
@@ -109,6 +130,14 @@ export class MemoryRetrievalCapability
       20,
       this.maxLimit,
     );
+  }
+
+  uiComponents() {
+    return [];
+  }
+
+  docs(): string {
+    return DOCS;
   }
 
   microfrontendData() {

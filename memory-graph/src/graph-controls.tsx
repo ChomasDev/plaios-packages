@@ -31,7 +31,7 @@ export function GraphStatus({
   );
 }
 
-export function NodeDetails({ node, connectionCount = 0, onClose, onForget }: { node?: GraphNodeDto; connectionCount?: number; onClose?: () => void; onForget?: (id: string) => void }) {
+export function NodeDetails({ node, connectionCount, onClose, onForget }: { node?: GraphNodeDto; connectionCount: number; onClose: () => void; onForget?: (id: string) => void }) {
   if (!node) return null;
   return (
     <aside className="graph-inspector absolute bottom-3 right-3 top-3 z-20 w-[min(23rem,calc(100%-1.5rem))] border bg-background/95 shadow-2xl backdrop-blur-xl">

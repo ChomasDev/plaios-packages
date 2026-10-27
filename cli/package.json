@@ -1,6 +1,6 @@
 {
   "name": "agentos",
-  "version": "0.7.12",
+  "version": "0.8.1",
   "description": "Agent OS command line entrypoint",
   "keywords": ["agent-os", "cli", "capabilities", "agents"],
   "private": false,

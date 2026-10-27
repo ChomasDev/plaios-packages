@@ -28,15 +28,11 @@ export function lastUserMessageText(
     const message = messages[index];
     if (message?.role !== "user") continue;
     const content = renderContent(message.content).trim();
-    if (content) return lastUserUtterance(content);
+    if (!content) continue;
+    const lastTurn = parseTranscriptTurns(content).reverse().find((turn) => turn.role === "user");
+    return lastTurn?.content ?? content;
   }
   return undefined;
-}
-
-export function lastUserUtterance(text: string): string {
-  const turns = parseTranscriptTurns(text);
-  const lastUser = [...turns].reverse().find((turn) => turn.role === "user");
-  return lastUser?.content ?? text.trim();
 }
 
 export function parseTranscriptTurns(

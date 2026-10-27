@@ -36,4 +36,3 @@ function scoreManifest(manifest: CapabilityManifest, terms: readonly string[], r
 function normalize(value?: string): string { return value?.trim().toLowerCase() ?? ""; }
 function tokens(value?: string): string[] { return normalize(value).match(/[\p{L}\p{N}_-]+/gu) ?? []; }
 const STOP_WORDS = new Set(["a", "about", "and", "are", "can", "chi", "come", "con", "cosa", "could", "dei", "del", "della", "dimmi", "do", "does", "dove", "from", "how", "il", "is", "know", "la", "me", "mia", "mio", "my", "per", "perche", "please", "potresti", "puoi", "sei", "should", "sono", "tell", "the", "this", "that", "una", "uno", "what", "when", "where", "which", "who", "why", "with", "would"]);
-export { InMemoryCapabilityDiscovery as CapabilityDiscoveryMemoryAdapter };

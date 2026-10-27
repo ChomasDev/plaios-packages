@@ -17,10 +17,12 @@ import type { TelegramAdapterOptions, TelegramUpdate } from "./types.js";
 
 const MAX_MESSAGE_LENGTH = 4_096;
 const DEFAULT_MAX_IMAGE_BYTES = 10 * 1_024 * 1_024;
+const TYPING_INTERVAL_MS = 4_000;
 
 /** Telegram long-polling input and correlated output adapter. */
 export class TelegramAdapter implements InputInterface, OutputInterface {
   readonly channel = "telegram" as const;
+  readonly instructions = "Telegram shows plain text only: no markdown, no tables, no code fences. Use short paragraphs and lines starting with a dash for lists.";
   readonly description =
     "The Telegram chat that originated this message or the configured chat";
 
@@ -123,7 +125,6 @@ export class TelegramAdapter implements InputInterface, OutputInterface {
 
     const caption = message.caption?.trim();
     const photo = message.photo?.at(-1);
-    const hasPhoto = Boolean(photo);
     const text =
       message.text?.trim() ||
       caption ||
@@ -189,13 +190,22 @@ export class TelegramAdapter implements InputInterface, OutputInterface {
         chatId,
         messageId: message.message_id,
         telegramUserId,
-        hasPhoto,
+        hasPhoto: Boolean(photo),
         telegramPhotoFileId: photo?.file_id,
       },
     };
 
     try {
-      await this.contexts.run(chatId, () => listener(input));
+      await this.withTyping(chatId, () =>
+        this.contexts.run(chatId, () => listener(input)),
+      );
+    } catch (error) {
+      // Without this the user only sees silence, e.g. when the model login has expired.
+      await this.reportError(error);
+      const reason = error instanceof Error ? error.message : String(error);
+      await this.api
+        .sendMessage(chatId, `Sorry, I could not answer that: ${reason.slice(0, 500)}`)
+        .catch((sendError: unknown) => this.reportError(sendError));
     } finally {
       if (imageDirectory) {
         await rm(imageDirectory, { recursive: true, force: true });
@@ -203,15 +213,37 @@ export class TelegramAdapter implements InputInterface, OutputInterface {
     }
   }
 
-  private session(chatId: string): string {
-    const current = this.sessions.get(chatId);
-    if (current) {
-      return current;
-    }
+  private async withTyping(chatId: string, work: () => void | Promise<void>): Promise<void> {
+    let active = true;
+    let inFlight = false;
+    const abort = new AbortController();
+    const sendTyping = async (): Promise<void> => {
+      if (!active || inFlight) return;
+      inFlight = true;
+      try {
+        await this.api.sendTyping(chatId, abort.signal);
+      } catch (error) {
+        if (active) await this.reportError(error);
+      } finally {
+        inFlight = false;
+      }
+    };
 
-    const created = createSessionId(chatId);
-    this.sessions.set(chatId, created);
-    return created;
+    void sendTyping();
+    const timer = setInterval(() => void sendTyping(), TYPING_INTERVAL_MS);
+    try {
+      await work();
+    } finally {
+      active = false;
+      clearInterval(timer);
+      abort.abort();
+    }
+  }
+
+  private session(chatId: string): string {
+    const current = this.sessions.get(chatId) ?? createSessionId(chatId);
+    this.sessions.set(chatId, current);
+    return current;
   }
 
   private async reportError(error: unknown): Promise<void> {

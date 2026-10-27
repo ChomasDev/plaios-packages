@@ -1,13 +1,11 @@
 import type { ChatCompletionMessage } from "./types.js";
 import { parseTranscriptTurns, renderContent } from "./conversation.js";
 
-const DEFAULT_LIMIT = 40;
-export const CONVERSATION_HISTORY_LIMIT = 10;
+const STORED_MESSAGE_LIMIT = 40;
+const HISTORY_LIMIT = 10;
 
 export class ConversationStore {
   private readonly sessions = new Map<string, ChatCompletionMessage[]>();
-
-  constructor(private readonly limit = DEFAULT_LIMIT) {}
 
   resolve(
     sessionId: string,
@@ -29,18 +27,13 @@ export class ConversationStore {
     const next = [
       ...messages,
       { role: "assistant" as const, content: assistantText },
-    ].slice(-this.limit);
+    ].slice(-STORED_MESSAGE_LIMIT);
     this.sessions.set(sessionId, next);
-  }
-
-  snapshot(sessionId: string): ChatCompletionMessage[] {
-    return [...(this.sessions.get(sessionId) ?? [])];
   }
 }
 
 export function compactHistory(
   messages: readonly ChatCompletionMessage[],
-  limit = CONVERSATION_HISTORY_LIMIT,
 ): Array<{ role: string; content: string }> {
   return messages
     .flatMap((message) => {
@@ -48,10 +41,10 @@ export function compactHistory(
       if (!content) return [];
       return [{ role: message.role, content }];
     })
-    .slice(-limit);
+    .slice(-HISTORY_LIMIT);
 }
 
-export function expandTranscriptMessages(
+function expandTranscriptMessages(
   messages: readonly ChatCompletionMessage[],
 ): ChatCompletionMessage[] {
   return messages.flatMap((message) => {

@@ -50,3 +50,24 @@
 @media (min-width: 1280px) {
   .cron-grid { grid-template-columns: minmax(20rem, 24rem) minmax(0, 1fr); }
 }
+
+/* Chat-side schedule list (OpenUI CronjobList) and the deep-linked job on the page. */
+.cron-job--focus { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: var(--radius); }
+.cron-chat-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 1rem; overflow: hidden; }
+.cron-chat-item + .cron-chat-item { border-top: 1px solid var(--border); }
+.cron-chat-row { display: flex; align-items: center; gap: 0.75rem; width: 100%; padding: 0.75rem 1.25rem; background: none; border: 0; text-align: left; color: inherit; cursor: pointer; }
+.cron-chat-row:hover { background: color-mix(in oklch, var(--muted) 60%, transparent); }
+.cron-chat-dot { width: 0.5rem; height: 0.5rem; border-radius: 999px; background: color-mix(in oklch, var(--muted-foreground) 40%, transparent); flex: none; }
+.cron-chat-dot.is-active { background: oklch(0.72 0.17 160); }
+.cron-chat-main { min-width: 0; flex: 1; display: grid; }
+.cron-chat-name { font-size: 0.875rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cron-chat-meta { font-size: 0.75rem; color: var(--muted-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cron-chat-chevron { color: var(--muted-foreground); font-size: 1rem; width: 1rem; text-align: center; }
+.cron-chat-detail { padding: 0 1.25rem 1rem 3rem; font-size: 0.875rem; line-height: 1.6; color: var(--muted-foreground); }
+.cron-chat-detail p { margin: 0 0 0.75rem; white-space: pre-wrap; }
+.cron-chat-error { color: var(--destructive); }
+.cron-chat-actions { display: flex; gap: 0.5rem; }
+.cron-chat-actions button { border: 1px solid var(--border); background: var(--card); color: var(--foreground); border-radius: 999px; padding: 0.3rem 0.9rem; font-size: 0.8rem; cursor: pointer; }
+.cron-chat-actions button:hover { border-color: var(--foreground); }
+.cron-chat-actions button.is-danger:hover { color: var(--destructive); border-color: var(--destructive); }
+.cron-chat-empty { padding: 1rem 1.25rem; font-size: 0.875rem; color: var(--muted-foreground); }

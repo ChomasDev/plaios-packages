@@ -59,3 +59,66 @@
 @media (min-width: 900px) {
   .ha-overview { grid-template-columns: minmax(0, 1fr) auto; align-items: end; padding: 2rem; }
 }
+
+/* Chat components: HomeCameras and HomeDevices, sized for the answer column. The answer's prose line height must not leak in. */
+.ha-cams, .ha-tiles-wrap { line-height: 1.3; }
+.ha-chat-empty { padding: .5rem 0; font-size: .85rem; color: var(--muted-foreground); }
+@keyframes ha-shimmer { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+@keyframes ha-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@keyframes ha-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.ha-cams { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr)); gap: .6rem; }
+.ha-cams.is-single { grid-template-columns: 1fr; }
+.ha-cam { position: relative; display: block; aspect-ratio: 16 / 10; overflow: hidden; border-radius: 1rem; border: 1px solid var(--border); background: var(--muted); text-align: left; cursor: zoom-in; transition: transform .25s cubic-bezier(.22, 1, .36, 1), box-shadow .25s, border-color .25s; }
+.ha-cam:hover { transform: translateY(-2px); border-color: color-mix(in oklab, var(--foreground) 22%, var(--border)); box-shadow: 0 12px 30px -18px rgb(0 0 0 / .45); }
+.ha-cam:active { transform: scale(.985); }
+.ha-cam.is-expanded { grid-column: 1 / -1; aspect-ratio: 16 / 9; cursor: zoom-out; }
+.ha-cam-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; animation: ha-fade .4s ease-out; }
+.ha-cam-empty { position: absolute; inset: 0; display: grid; place-items: center; padding: 1rem; font-size: .75rem; color: var(--muted-foreground); text-align: center; }
+.ha-shimmer { background: linear-gradient(100deg, transparent 30%, color-mix(in oklab, var(--background) 55%, transparent) 50%, transparent 70%) var(--muted); background-size: 200% 100%; animation: ha-shimmer 1.4s linear infinite; }
+.ha-cam-badge { position: absolute; top: .55rem; left: .55rem; display: inline-flex; align-items: center; gap: .35rem; border-radius: 999px; background: rgb(0 0 0 / .45); padding: .25rem .5rem; font-size: .62rem; line-height: 1; font-weight: 600; letter-spacing: .04em; color: white; backdrop-filter: blur(6px); }
+.ha-cam-dot { width: .4rem; height: .4rem; border-radius: 999px; background: rgb(255 255 255 / .6); }
+.ha-cam-dot.is-live { background: #ef4444; animation: ha-pulse 1.8s ease-in-out infinite; }
+.ha-cam-caption { position: absolute; inset: auto 0 0; display: grid; gap: .1rem; padding: 1.6rem .75rem .6rem; background: linear-gradient(to top, rgb(0 0 0 / .65), transparent); color: white; }
+.ha-cam-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .8rem; font-weight: 600; }
+.ha-cam-meta { font-size: .65rem; opacity: .75; font-variant-numeric: tabular-nums; }
+
+.ha-tiles-wrap { display: grid; gap: .5rem; }
+.ha-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr)); gap: .5rem; }
+.ha-tile { display: grid; gap: .6rem; border-radius: 1rem; border: 1px solid var(--border); background: var(--card); padding: .7rem .8rem; transition: border-color .25s, background-color .25s, opacity .25s; }
+.ha-tile.is-active { border-color: color-mix(in oklab, #f59e0b 35%, var(--border)); background: color-mix(in oklab, #f59e0b 6%, var(--card)); }
+.ha-tile.is-unavailable { opacity: .55; }
+.ha-tile-row { display: flex; align-items: center; gap: .65rem; }
+.ha-tile-icon { display: grid; width: 2rem; height: 2rem; flex: none; place-items: center; border-radius: .7rem; background: var(--muted); font-size: .95rem; color: var(--muted-foreground); transition: background-color .25s, color .25s, transform .25s cubic-bezier(.22, 1, .36, 1); }
+.ha-tile.is-active .ha-tile-icon { background: color-mix(in oklab, #f59e0b 22%, var(--card)); color: #d97706; transform: scale(1.05); }
+.ha-tile-text { display: grid; min-width: 0; flex: 1; }
+.ha-tile-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .82rem; font-weight: 600; }
+.ha-tile-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .68rem; color: var(--muted-foreground); text-transform: capitalize; }
+.ha-tile-reading { flex: none; font-size: .9rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ha-tile-buttons { display: inline-flex; flex: none; align-items: center; gap: .3rem; }
+.ha-pill { min-width: 1.9rem; height: 1.9rem; flex: none; border-radius: 999px; border: 1px solid var(--border); padding: 0 .6rem; font-size: .7rem; font-weight: 600; transition: background-color .2s, transform .15s; }
+.ha-pill:hover { background: var(--muted); }
+.ha-pill:active { transform: scale(.94); }
+.ha-pill:disabled { opacity: .45; cursor: not-allowed; }
+
+.ha-switch { position: relative; width: 2.25rem; height: 1.25rem; flex: none; border-radius: 999px; background: color-mix(in oklab, var(--muted-foreground) 30%, transparent); transition: background-color .25s; }
+.ha-switch::after { content: ""; position: absolute; top: .125rem; left: .125rem; width: 1rem; height: 1rem; border-radius: 999px; background: white; box-shadow: 0 1px 3px rgb(0 0 0 / .25); transition: transform .3s cubic-bezier(.34, 1.4, .64, 1); }
+.ha-switch[aria-checked="true"] { background: #f59e0b; }
+.ha-switch[aria-checked="true"]::after { transform: translateX(1rem); }
+.ha-switch:disabled { opacity: .5; }
+.ha-switch:active::after { width: 1.2rem; }
+.ha-switch[aria-checked="true"]:active::after { transform: translateX(.8rem); }
+
+.ha-tile-range { display: flex; align-items: center; gap: .6rem; font-size: .68rem; color: var(--muted-foreground); animation: agent-os-rise .3s cubic-bezier(.22, 1, .36, 1) both; }
+.ha-tile-range input { min-width: 0; flex: 1; height: .35rem; appearance: none; border-radius: 999px; background: linear-gradient(to right, #f59e0b var(--ha-fill, 50%), var(--muted) var(--ha-fill, 50%)); cursor: pointer; }
+.ha-tile-range input::-webkit-slider-thumb { appearance: none; width: .95rem; height: .95rem; border-radius: 999px; background: white; box-shadow: 0 1px 4px rgb(0 0 0 / .3); transition: transform .15s; }
+.ha-tile-range input:active::-webkit-slider-thumb { transform: scale(1.2); }
+.ha-tile-range input::-moz-range-thumb { width: .95rem; height: .95rem; border: 0; border-radius: 999px; background: white; box-shadow: 0 1px 4px rgb(0 0 0 / .3); }
+.ha-tile-range strong { width: 2.4rem; text-align: right; font-variant-numeric: tabular-nums; color: var(--foreground); }
+.ha-more { justify-self: center; border-radius: 999px; padding: .35rem .9rem; font-size: .72rem; color: var(--muted-foreground); transition: background-color .2s, color .2s; }
+.ha-more:hover { background: var(--muted); color: var(--foreground); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ha-cam, .ha-switch::after, .ha-tile-icon { transition: none; }
+  .ha-cam-dot.is-live, .ha-shimmer { animation: none; }
+}

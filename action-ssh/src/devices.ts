@@ -19,7 +19,7 @@ export interface PublicDevice {
   hasKey: boolean;
 }
 
-export function parseDevices(options: {
+interface DeviceOptions {
   devices?: unknown;
   host?: string;
   user?: string;
@@ -27,10 +27,11 @@ export function parseDevices(options: {
   privateKey?: string;
   privateKeyPath?: string;
   env?: { get(key: string): string | undefined };
-}): RemoteDevice[] {
-  const fromJson = readJsonDevices(
-    firstText(options.devices) ?? options.env?.get("SSH_DEVICES"),
-  );
+}
+
+export function parseDevices(options: DeviceOptions): RemoteDevice[] {
+  const json = typeof options.devices === "string" ? options.devices : options.devices == null ? undefined : JSON.stringify(options.devices);
+  const fromJson = readJsonDevices(json ?? options.env?.get("SSH_DEVICES"));
   const single = singleDevice(options);
   const devices = [...fromJson, ...(single ? [single] : [])];
   const seen = new Set<string>();
@@ -66,14 +67,7 @@ export function findDevice(
   return devices.length === 1 ? devices[0] : undefined;
 }
 
-function singleDevice(options: {
-  host?: string;
-  user?: string;
-  port?: number | string;
-  privateKey?: string;
-  privateKeyPath?: string;
-  env?: { get(key: string): string | undefined };
-}): RemoteDevice | undefined {
+function singleDevice(options: DeviceOptions): RemoteDevice | undefined {
   const host = options.host ?? options.env?.get("SSH_HOST");
   const user = options.user ?? options.env?.get("SSH_USER");
   if (!host || !user) return undefined;
@@ -103,9 +97,8 @@ function normalizeDevice(value: Record<string, unknown>): RemoteDevice {
   const host = text(value.host) ?? text(value.ip);
   const user = text(value.user) ?? text(value.username);
   if (!host || !user) throw new Error("Each SSH device needs host and user");
-  const id = text(value.id) ?? slug(`${user}@${host}`);
   return {
-    id,
+    id: text(value.id) ?? slug(`${user}@${host}`),
     name: text(value.name) ?? `${user}@${host}`,
     host,
     user,
@@ -131,12 +124,6 @@ function osOf(value: unknown): RemoteDevice["os"] {
 
 function text(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
-}
-
-function firstText(value: unknown): string | undefined {
-  if (typeof value === "string") return value;
-  if (value == null) return undefined;
-  return JSON.stringify(value);
 }
 
 function slug(value: string): string {

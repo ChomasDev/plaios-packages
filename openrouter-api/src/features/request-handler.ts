@@ -101,7 +101,7 @@ export class RequestHandler {
       writeJson(response, 200, { object: "list", data: this.modelList() });
       return;
     }
-    if (request.method === "GET" && this.isModelDetailPath(path)) {
+    if (request.method === "GET" && /^(\/api)?\/v1\/models\//.test(path)) {
       this.writeModelDetail(response, path);
       return;
     }
@@ -202,7 +202,7 @@ export class RequestHandler {
       id: `input-${randomUUID()}`,
       channel: "openrouter-api",
       sessionId,
-      userId: normalizeText(body.user) ?? normalizeText(this.options.userId),
+      userId: body.user ?? normalizeText(this.options.userId),
       text: renderConversation(messages),
       createdAt: new Date(),
       metadata: {
@@ -226,11 +226,11 @@ export class RequestHandler {
   private chatSessionId(request: IncomingMessage, body: ChatCompletionRequest): string {
     return (
       normalizeText(firstHeader(request, "x-openclaw-session-key")) ??
-      normalizeText(body.session_id) ??
+      body.session_id ??
       normalizeText(firstHeader(request, "x-session-id")) ??
       this.options.sessionId ??
       (this.options.userId ? `openrouter-${this.options.userId}` : undefined) ??
-      (normalizeText(body.user) ? `openrouter-${normalizeText(body.user)}` : undefined) ??
+      (body.user ? `openrouter-${body.user}` : undefined) ??
       "openrouter"
     );
   }
@@ -245,13 +245,13 @@ export class RequestHandler {
       normalizeText(firstHeader(request, "x-session-id")) ??
       this.options.sessionId ??
       (this.options.userId ? `openresponses-${this.options.userId}` : undefined) ??
-      (normalizeText(body.user) ? `openresponses-${normalizeText(body.user)}` : undefined) ??
+      (body.user ? `openresponses-${body.user}` : undefined) ??
       "openresponses";
     return {
       id: `input-${randomUUID()}`,
       channel: "openrouter-api",
       sessionId,
-      userId: normalizeText(body.user) ?? normalizeText(this.options.userId),
+      userId: body.user ?? normalizeText(this.options.userId),
       text: renderResponsesInput(body),
       createdAt: new Date(),
       metadata: {
@@ -264,15 +264,11 @@ export class RequestHandler {
         messageChannel: normalizeText(
           firstHeader(request, "x-openclaw-message-channel"),
         ),
-        previousResponseId: normalizeText(body.previous_response_id),
+        previousResponseId: body.previous_response_id,
         stream: body.stream === true,
         remoteAddress: request.socket.remoteAddress,
       },
     };
-  }
-
-  private isModelDetailPath(path: string): boolean {
-    return path.startsWith("/v1/models/") || path.startsWith("/api/v1/models/");
   }
 
   private writeModelDetail(response: ServerResponse, path: string): void {

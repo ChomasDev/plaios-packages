@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
   MicrofrontendFrame,
   type MicrofrontendProps,
@@ -8,7 +8,9 @@ import {
 import { GraphStatus, NodeDetails } from "./graph-controls.js";
 import { GraphExplorer } from "./graph-explorer.js";
 import { GraphExplorer3D } from "./graph-explorer-3d.js";
-import { nodeById, type GraphData } from "./graph-view-model.js";
+import type { GraphData } from "./graph-view-model.js";
+import { bestMatch, neighborhood } from "./graph-focus.js";
+import { MEMORY_GRAPH_OPENUI } from "./openui.js";
 
 type EdgeMode = "context" | "all";
 type RenderMode = "3d" | "2d";
@@ -21,7 +23,8 @@ export default function GraphMemoryMicrofrontend({
   const [content, setContent] = useState("");
   const [userId, setUserId] = useState("");
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string>();
+  // Deep link from chat: #component/<instance>?node=<id> opens the explorer on that node.
+  const [selectedId, setSelectedId] = useState<string | undefined>(() => new URLSearchParams(location.hash.split("?")[1] ?? "").get("node") ?? undefined);
   const [hiddenTypes, setHiddenTypes] = useState<string[]>([]);
   const [edgeMode, setEdgeMode] = useState<EdgeMode>("all");
   const [renderMode, setRenderMode] = useState<RenderMode>("3d");
@@ -31,7 +34,7 @@ export default function GraphMemoryMicrofrontend({
   useEffect(() => setSnapshot(data), [data]);
   const nodes = useMemo(() => snapshot?.nodes ?? [], [snapshot?.nodes]);
   const edges = useMemo(() => snapshot?.edges ?? [], [snapshot?.edges]);
-  const selected = nodeById(nodes, selectedId);
+  const selected = nodes.find((node) => node.id === selectedId);
   const typeCounts = useMemo(() => {
     const counts = new Map<string, number>();
     for (const node of nodes) counts.set(node.type, (counts.get(node.type) ?? 0) + 1);
@@ -188,3 +191,38 @@ function formatCount(value: number): string {
 function safeClass(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9_-]+/g, "-");
 }
+
+interface MemoryGraphArgs { focus: string; depth?: number }
+
+/** OpenUI component for chat answers: the node for a person or topic with its linked memories, click to explore. */
+const MemoryGraphPreview = memo(function MemoryGraphPreview({ component, data, args }: MicrofrontendProps<GraphData> & { args: MemoryGraphArgs }) {
+  const nodes = data?.nodes ?? [];
+  const edges = data?.edges ?? [];
+  const [centerId, setCenterId] = useState<string>();
+  const match = useMemo(() => bestMatch(nodes, args.focus), [nodes, args.focus]);
+  const center = nodes.find((node) => node.id === (centerId ?? match?.id));
+  const depth = Math.min(2, Math.max(1, Math.round(args.depth ?? 1)));
+  const local = useMemo(() => neighborhood(nodes, edges, center?.id, depth), [nodes, edges, center?.id, depth]);
+  const onSelect = useCallback((id?: string) => { if (id) setCenterId(id); }, []);
+  if (!data) return <p className="graph-preview-empty">Loading memory…</p>;
+  if (!center) return <p className="graph-preview-empty">Nothing in memory about “{args.focus}”.</p>;
+  const linked = local.nodes.filter((node) => node.id !== center.id).sort((a, b) => b.weight - a.weight);
+  return <div className="graph-preview-wide"><div className="graph-preview rise-in">
+    <div className="graph-preview-canvas">
+      <GraphExplorer3D nodes={local.nodes} edges={local.edges} query="" hiddenTypes={[]} edgeMode="all" selectedId={center.id} onSelect={onSelect} />
+    </div>
+    <aside className="graph-preview-side">
+      <p className="graph-preview-type">{center.type}</p>
+      <h4>{center.label}</h4>
+      <p className="graph-preview-meta">{linked.length} linked · weight {center.weight.toFixed(2)}</p>
+      <ul>
+        {linked.slice(0, 8).map((node, index) => <li key={node.id} className="rise-in" style={{ animationDelay: `${index * 50}ms` }}>
+          <button type="button" onClick={() => setCenterId(node.id)} title={node.label}><span className="graph-preview-dot" data-type={node.type} aria-hidden="true" />{node.label}</button>
+        </li>)}
+      </ul>
+      <button type="button" className="graph-preview-open" onClick={() => { location.hash = `component/${encodeURIComponent(component.instanceId)}?node=${encodeURIComponent(center.id)}`; }}>Open in graph</button>
+    </aside>
+  </div></div>;
+});
+
+export const openui = [{ ...MEMORY_GRAPH_OPENUI, component: MemoryGraphPreview }];

@@ -100,14 +100,9 @@ export class MapEnvironment extends BaseEnvironment {
 export interface CompositeEnvironmentOptions { providers?: readonly Environment[]; cwd?: string; filePath?: string; exampleFilePath?: string; }
 export class CompositeEnvironment extends BaseEnvironment {
   private readonly providers: readonly Environment[];
-  constructor(options: CompositeEnvironmentOptions | readonly Environment[] = {}) {
+  constructor(options: CompositeEnvironmentOptions = {}) {
     super();
-    if (Array.isArray(options)) {
-      this.providers = options as readonly Environment[];
-    } else {
-      const configuration = options as CompositeEnvironmentOptions;
-      this.providers = configuration.providers ?? [new ProcessEnvironment(), new DotenvEnvironment(configuration)];
-    }
+    this.providers = options.providers ?? [new ProcessEnvironment(), new DotenvEnvironment(options)];
     if (this.providers.length === 0) throw new Error("CompositeEnvironment requires at least one provider");
   }
   get(key: string): string | undefined { for (const provider of this.providers) { const value = provider.get(key); if (value !== undefined) return value; } return undefined; }
@@ -118,8 +113,6 @@ export class CompositeEnvironment extends BaseEnvironment {
     return { source: "composite", providerCount: this.providers.length, configuredCount: Object.keys(this.getAll()).length, variables: data?.variables ?? [], ...(data?.update ? { update: data.update } : {}) };
   }
 }
-
-export { CompositeEnvironment as CompositeEnvAdapter, DotenvEnvironment as DotenvFileAdapter, MapEnvironment as MapEnvAdapter, ProcessEnvironment as NodeEnvironment, ProcessEnvironment as ProcessEnvAdapter };
 
 export function parseDotenv(contents: string): Map<string, string> {
   const values = new Map<string, string>();

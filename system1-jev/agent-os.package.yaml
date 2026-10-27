@@ -1,0 +1,29 @@
+schemaVersion: 1
+id: system1-jev
+name: Jev System 1
+version: 0.2.0
+description: TypeSafe Jev as System 1, fast typed judgments for plugins
+interfaces:
+  - id: system1-jev.system1
+    kind: system1
+    name: JevSystem1
+    entry: .
+    export: .
+    className: JevSystem1
+    description: Answers typed choice and yes/no questions with TypeSafe Jev
+    surfaces: [network]
+    permissions: [network.http]
+    required: [env]
+    config:
+      - key: apiKey
+        env: JEV_API_KEY
+        type: secret
+        required: false
+        description: TypeSafe Jev API key
+      - key: model
+        env: JEV_MODEL
+        type: string
+        required: false
+        description: Jev model (default TYPESAFE_DEFAULT_MODEL, then jev-latest)
+    startup:
+      when: ifConfigured

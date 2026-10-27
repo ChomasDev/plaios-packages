@@ -1,0 +1,32 @@
+schemaVersion: 1
+id: tiktok-series
+name: TikTok Series Research
+version: 0.2.1
+description: Real viral TikToks of the last days (Apify) plus the go2match series bible, to write one episode script per day
+interfaces:
+  - id: tiktok-series.action
+    kind: action
+    name: TikTokSeriesCapability
+    entry: .
+    export: .
+    className: TikTokSeriesCapability
+    description: Scrapes recent viral TikToks with metrics and transcripts and returns today's episode brief
+    surfaces: [network, web]
+    permissions: [network.http, web.search]
+    required: [env]
+    config:
+      - { key: apifyToken, env: APIFY_TOKEN, type: secret, required: true, description: Apify API token }
+      - { key: queries, env: TIKTOK_SERIES_QUERIES, type: string, required: false, description: "Comma-separated TikTok search queries (default: nightlife + founder storytelling, Italian)" }
+      - { key: videosPerQuery, env: TIKTOK_SERIES_VIDEOS_PER_QUERY, type: number, required: false, default: 6, description: Videos scraped per query (the first 10-20 per query are free, then ~0.0003 USD each) }
+      - { key: seriesStartDate, env: TIKTOK_SERIES_START_DATE, type: string, required: false, default: "2026-10-21", description: Date of episode 1 (YYYY-MM-DD), used to number episodes }
+      - { key: everyDays, env: TIKTOK_SERIES_EVERY_DAYS, type: number, required: false, default: 4, description: "Episode cadence, must match the cron day-of-month step (0 9 */4 * *)" }
+    capability:
+      id: tiktok.series
+      version: 1.0.0
+      name: research_tiktok_series_episode
+      description: Get real viral TikToks from the last days and today's go2match series brief, to write a TikTok episode script.
+      permissions: [network.http, web.search]
+      tags: [tiktok, trend, viral, script, series, go2match, video, hook, social]
+      execution: { timeoutMs: 300000, idempotent: true }
+    startup: { when: ifConfigured }
+    web: { entry: ./web/action, export: default, styles: ./web/styles.css }

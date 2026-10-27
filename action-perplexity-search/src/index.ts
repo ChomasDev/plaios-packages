@@ -4,8 +4,16 @@ import type {
   CapabilityExecutionContext,
   CapabilityManifest,
   CapabilityResult,
+  Database,
   Environment,
+  UIComponentSpec,
 } from "@agent-os/core/domain";
+
+import { SearchStore, type StoredSearch } from "./search-store.js";
+import { WEB_SOURCES } from "./ui-components.js";
+
+export { WEB_SOURCES } from "./ui-components.js";
+export type { StoredSearch } from "./search-store.js";
 
 export interface PerplexitySearchInput {
   query: string;
@@ -42,7 +50,23 @@ export interface PerplexitySearchCapabilityOptions {
   client?: PerplexitySearchClient;
   apiKey?: string;
   env: Environment;
+  /** Scoped database from the host; searches are kept there so WebSources cards outlive a restart. */
+  database?: Database;
 }
+
+const DOCS = `Searches the live web through the Perplexity Search API and returns ranked sources (title, url, snippet, date).
+
+**Use it** for anything that may have changed since your training: news, prices, releases, schedules, people's current roles, or when the user asks you to look something up. **Don't use it** for things memory or another capability already knows (the user's own devices, files, schedules).
+
+**Inputs**
+- \`query\`: write it like a search, specific and self-contained: \`{"query":"Node.js 26 release date"}\`.
+- \`searchRecencyFilter\` for fresh topics: \`{"query":"Serie A results","searchRecencyFilter":"day"}\`.
+- \`searchDomainFilter\` to stay on trusted sites: \`{"query":"fastify v6 breaking changes","searchDomainFilter":["fastify.dev","github.com"]}\`.
+- \`maxResults\` defaults to 5 (max 20); more results cost more tokens.
+
+**After searching**, answer from the snippets and cite sources. In the web chat, show them with \`WebSources("<id>")\` using the returned \`id\` instead of pasting links.
+
+**Limits**: 30 s timeout; snippets are short, so say so when they are not enough instead of guessing. A failure with WEB_SEARCH_FAILED is retryable once.`;
 
 const manifest: CapabilityManifest = {
   id: "web.search",
@@ -160,34 +184,36 @@ export class PerplexitySearchCapability
   readonly manifest = manifest;
 
   private readonly client: PerplexitySearchClient;
-  private readonly configured: boolean;
+  private readonly searches: SearchStore;
 
   constructor(options: PerplexitySearchCapabilityOptions) {
-    if (options.client) {
-      this.client = options.client;
-      this.configured = true;
-      return;
-    }
-
+    this.searches = new SearchStore(options.database);
     const apiKey = options.apiKey ?? options.env.get("PERPLEXITY_API_KEY");
-
-    if (!apiKey) {
-      throw new Error(
-        "PERPLEXITY_API_KEY is required for PerplexitySearchCapability",
-      );
+    if (!options.client && !apiKey) {
+      throw new Error("PERPLEXITY_API_KEY is required for PerplexitySearchCapability");
     }
-
-    this.client = new Perplexity({ apiKey });
-    this.configured = true;
+    this.client = options.client ?? new Perplexity({ apiKey });
   }
 
   microfrontendData() {
     return {
-      configured: this.configured,
+      configured: true,
       provider: "Perplexity Search API",
       maxResults: 20,
       recencyFilters: ["hour", "day", "week", "month", "year"],
+      // `queries` only read; WebSources cards fetch one stored search by id.
+      queries: {
+        search: async (id: string): Promise<StoredSearch | null> => (await this.searches.find(id)) ?? null,
+      },
     };
+  }
+
+  uiComponents(): readonly UIComponentSpec[] {
+    return [WEB_SOURCES];
+  }
+
+  docs(): string {
+    return DOCS;
   }
 
   async execute(
@@ -195,14 +221,8 @@ export class PerplexitySearchCapability
     context: CapabilityExecutionContext,
   ): Promise<CapabilityResult<PerplexitySearchOutput>> {
     const query = input.query?.trim();
-
-    if (!query) {
-      return failure("VALIDATION_ERROR", "Input 'query' is required", false);
-    }
-
-    if (context.signal?.aborted) {
-      return failure("SEARCH_ABORTED", "Web search was aborted", true);
-    }
+    if (!query) return failure("VALIDATION_ERROR", "Input 'query' is required", false);
+    if (context.signal?.aborted) return failure("SEARCH_ABORTED", "Web search was aborted", true);
 
     try {
       const response = await this.client.search.create({
@@ -215,19 +235,17 @@ export class PerplexitySearchCapability
         search_context_size: input.searchContextSize ?? "medium",
       });
 
-      return {
-        success: true,
-        data: {
-          id: response.id,
-          results: response.results.map((page) => ({
-            title: page.title,
-            url: page.url,
-            snippet: page.snippet,
-            date: page.date ?? undefined,
-            lastUpdated: page.last_updated ?? undefined,
-          })),
-        },
-      };
+      const results = response.results.map((page) => ({
+        title: page.title,
+        url: page.url,
+        snippet: page.snippet,
+        date: page.date ?? undefined,
+        lastUpdated: page.last_updated ?? undefined,
+      }));
+      // A card that cannot load its sources is worse than none, but storing must never fail the search itself.
+      await this.searches.save({ id: response.id, query, results, createdAt: new Date().toISOString() })
+        .catch((error: unknown) => console.warn(`[perplexity] could not store search ${response.id}: ${error instanceof Error ? error.message : String(error)}`));
+      return { success: true, data: { id: response.id, results } };
     } catch (error) {
       return failure(
         "WEB_SEARCH_FAILED",
@@ -238,34 +256,11 @@ export class PerplexitySearchCapability
   }
 }
 
-export function normalizeMaxResults(
-  value: number | null | undefined,
-): number | undefined {
-  if (value == null || Number.isNaN(value)) {
-    return undefined;
-  }
-
+export function normalizeMaxResults(value: number | null | undefined): number | undefined {
+  if (value == null || Number.isNaN(value)) return undefined;
   return Math.min(20, Math.max(1, Math.trunc(value)));
 }
 
-function failure(
-  code: string,
-  message: string,
-  retryable: boolean,
-): CapabilityResult<never> {
-  return {
-    success: false,
-    error: {
-      code,
-      message,
-      retryable,
-    },
-  };
+function failure(code: string, message: string, retryable: boolean): CapabilityResult<never> {
+  return { success: false, error: { code, message, retryable } };
 }
-
-/** @deprecated Use PerplexitySearchCapability. */
-export { PerplexitySearchCapability as PerplexityserachCapability };
-export type PerplexityserachInput = PerplexitySearchInput;
-export type PerplexityserachOutput = PerplexitySearchOutput;
-export type PerplexityserachCapabilityOptions =
-  PerplexitySearchCapabilityOptions;

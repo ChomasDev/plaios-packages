@@ -1,7 +1,7 @@
 schemaVersion: 1
 id: orchestrator-default
 name: Default Orchestrator
-version: 0.1.2
+version: 0.1.3
 description: Low-latency dynamic capability and output router with optional model routing
 interfaces:
   - id: orchestrator-default.orchestrator
@@ -12,7 +12,7 @@ interfaces:
     className: DefaultOrchestrator
     description: Chooses capability ids, primary output, additional outputs, and durable memory proposals
     surfaces: [local]
-    required: [ai, discovery]
+    required: [system2, discovery]
     config:
       - key: fastPath
         type: boolean

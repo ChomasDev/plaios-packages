@@ -32,10 +32,7 @@ export class CandidateSelector {
     query: MemoryQuery,
     limit: number,
   ): Promise<RankedNode[]> {
-    const candidateLimit = Math.min(
-      this.options.fallbackScanLimit,
-      Math.max(limit * 4, limit),
-    );
+    const candidateLimit = Math.min(this.options.fallbackScanLimit, limit * 4);
     const now = this.options.clock();
     const nodes = await this.store.candidateNodes(query, candidateLimit);
     return nodes
@@ -110,16 +107,6 @@ export class CandidateSelector {
     query: MemoryQuery,
     limit: number,
   ): Promise<VectorCandidates> {
-    if (!this.store.hasVectorStore()) {
-      return {
-        nodes: await this.store.candidateNodes(
-          query,
-          this.options.fallbackScanLimit,
-        ),
-        scores: new Map(),
-      };
-    }
-
     const filter: Record<string, unknown> = {};
     if (query.userId !== undefined) filter.userId = query.userId;
     if (query.sessionId !== undefined) filter.sessionId = query.sessionId;
@@ -127,7 +114,13 @@ export class CandidateSelector {
       this.options.seedLimit,
       Math.min(limit * 4, this.options.maxTraversalNodes),
     );
-    const matches = await this.store.vectorQuery(vector, vectorLimit, filter) ?? [];
+    const matches = await this.store.vectorQuery(vector, vectorLimit, filter);
+    if (!matches) {
+      return {
+        nodes: await this.store.candidateNodes(query, this.options.fallbackScanLimit),
+        scores: new Map(),
+      };
+    }
     const nodes = await Promise.all(matches.map(({ id }) => this.store.node(id)));
     return {
       nodes: nodes.filter((node): node is StoredNode => node !== undefined),

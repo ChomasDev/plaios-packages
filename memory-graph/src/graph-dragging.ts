@@ -5,7 +5,7 @@ import type {
   MemoryNodeAttributes,
 } from "./graph-view-model.js";
 
-interface ForceLayout {
+export interface ForceLayout {
   isRunning(): boolean;
   start(): void;
   stop(): void;

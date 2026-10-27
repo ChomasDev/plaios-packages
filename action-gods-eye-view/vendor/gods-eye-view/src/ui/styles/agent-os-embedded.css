@@ -1,0 +1,403 @@
+/* Agent OS host treatment. It is deliberately scoped so the standalone app
+   keeps the upstream design unchanged. */
+html[data-agent-os-embedded='true'] {
+  --bg-dark: #090e12;
+  --glass-bg: rgba(13, 20, 26, 0.82);
+  --glass-border: rgba(226, 232, 240, 0.13);
+  --glass-border-hover: rgba(226, 232, 240, 0.24);
+  --accent: #5fc3c8;
+  --accent-dim: rgba(95, 195, 200, 0.14);
+  --accent-glow: rgba(95, 195, 200, 0.26);
+  --text-primary: #edf2f3;
+  --text-secondary: rgba(237, 242, 243, 0.62);
+  --text-dim: rgba(237, 242, 243, 0.38);
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  --font-mono: 'SFMono-Regular', 'SF Mono', ui-monospace, monospace;
+  --panel-radius: 12px;
+  --btn-radius: 8px;
+}
+
+html[data-agent-os-embedded='true'] #command-dock,
+html[data-agent-os-embedded='true'] #gev-voice-control,
+html[data-agent-os-embedded='true'] #scope-mask,
+html[data-agent-os-embedded='true'] #title-bar,
+html[data-agent-os-embedded='true'] #style-indicator,
+html[data-agent-os-embedded='true'] #data-panel,
+html[data-agent-os-embedded='true'] #intel-hud .hud-top-left,
+html[data-agent-os-embedded='true'] #intel-hud .hud-top-right,
+html[data-agent-os-embedded='true'] #intel-hud .hud-left-edge,
+html[data-agent-os-embedded='true'] #intel-hud .hud-right-edge {
+  display: none !important;
+}
+
+html[data-agent-os-embedded='true'] #top-center-actions .lucide {
+  width: 17px;
+  height: 17px;
+}
+
+html[data-agent-os-embedded='true']
+  :where(.glass-panel, .panel-inner, .location-inner) {
+  border-color: rgba(226, 232, 240, 0.13);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.28);
+}
+
+html[data-agent-os-embedded='true'] #cesium-credits {
+  color: rgba(237, 242, 243, 0.62);
+}
+
+html[data-agent-os-embedded='true'] #agent-os-command {
+  position: fixed;
+  z-index: 1200;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  width: min(620px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  color: #f7f8f8;
+  font-family: var(--font-sans);
+}
+
+html[data-agent-os-embedded='true'] .agent-os-command-form {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto 38px auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 6px 7px 6px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  background: rgba(20, 22, 25, 0.94);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(18px) saturate(120%);
+}
+
+html[data-agent-os-embedded='true']
+  #agent-os-command:focus-within
+  .agent-os-command-form {
+  border-color: rgba(104, 211, 218, 0.54);
+  box-shadow:
+    0 18px 52px rgba(0, 0, 0, 0.42),
+    0 0 0 3px rgba(95, 195, 200, 0.1);
+}
+
+html[data-agent-os-embedded='true'] .agent-os-command-icon {
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 23px;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
+html[data-agent-os-embedded='true'] .agent-os-command-icon .lucide {
+  width: 18px;
+  height: 18px;
+}
+
+html[data-agent-os-embedded='true'] #agent-os-command-input {
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #f7f8f8;
+  font: 500 15px/1.4 var(--font-sans);
+  letter-spacing: -0.01em;
+}
+
+html[data-agent-os-embedded='true'] #agent-os-command-input::placeholder {
+  color: rgba(247, 248, 248, 0.44);
+}
+
+html[data-agent-os-embedded='true'] .agent-os-command-form kbd {
+  padding: 3px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(247, 248, 248, 0.48);
+  font: 500 11px/1.2 var(--font-sans);
+}
+
+html[data-agent-os-embedded='true']
+  .agent-os-command-form
+  > button[type='submit'] {
+  min-width: 54px;
+  height: 38px;
+  border: 1px solid rgba(113, 225, 231, 0.26);
+  border-radius: 9px;
+  background: #d7f7f7;
+  color: #102022;
+  font: 650 13px/1 var(--font-sans);
+  cursor: pointer;
+}
+
+html[data-agent-os-embedded='true']
+  .agent-os-command-form
+  > button[type='submit']:hover {
+  background: #edffff;
+}
+
+html[data-agent-os-embedded='true']
+  .agent-os-command-form
+  > button[type='submit']:disabled {
+  cursor: wait;
+  opacity: 0.52;
+}
+
+html[data-agent-os-embedded='true'] .agent-os-layer-trigger {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(247, 248, 248, 0.68);
+  cursor: pointer;
+}
+
+html[data-agent-os-embedded='true'] .agent-os-layer-trigger:hover,
+html[data-agent-os-embedded='true']
+  .agent-os-layer-trigger[aria-expanded='true'] {
+  border-color: rgba(104, 211, 218, 0.38);
+  background: rgba(95, 195, 200, 0.12);
+  color: #a8f0f1;
+}
+
+html[data-agent-os-embedded='true'] .agent-os-layer-trigger .lucide {
+  width: 17px;
+  height: 17px;
+}
+
+html[data-agent-os-embedded='true'] .agent-os-command-list {
+  display: none;
+  margin-bottom: 8px;
+  padding: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 14px;
+  background: rgba(20, 22, 25, 0.97);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.48);
+  backdrop-filter: blur(20px) saturate(120%);
+}
+
+html[data-agent-os-embedded='true'] .agent-os-layer-popover {
+  display: none;
+  margin-bottom: 8px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 14px;
+  background: rgba(20, 22, 25, 0.97);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.48);
+  backdrop-filter: blur(20px) saturate(120%);
+}
+
+html[data-agent-os-embedded='true']
+  #agent-os-command.is-layers-open
+  .agent-os-layer-popover {
+  display: block;
+}
+
+html[data-agent-os-embedded='true'] .agent-os-layer-heading {
+  display: grid;
+  gap: 3px;
+  margin: 0 2px 12px;
+}
+
+html[data-agent-os-embedded='true'] .agent-os-layer-heading strong {
+  color: #f7f8f8;
+  font: 620 13px/1.25 var(--font-sans);
+}
+
+html[data-agent-os-embedded='true'] .agent-os-layer-heading span {
+  color: rgba(247, 248, 248, 0.46);
+  font: 450 12px/1.25 var(--font-sans);
+}
+
+html[data-agent-os-embedded='true'] .agent-os-layer-section-label {
+  margin: 12px 2px 6px;
+  color: rgba(247, 248, 248, 0.45);
+  font: 560 11px/1.2 var(--font-sans);
+}
+
+html[data-agent-os-embedded='true'] .agent-os-terrain-grid,
+html[data-agent-os-embedded='true'] .agent-os-layer-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+html[data-agent-os-embedded='true'] .agent-os-terrain-option,
+html[data-agent-os-embedded='true'] .agent-os-layer-option {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 18px;
+  gap: 9px;
+  align-items: center;
+  min-height: 38px;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(247, 248, 248, 0.75);
+  text-align: left;
+  cursor: pointer;
+}
+
+html[data-agent-os-embedded='true'] .agent-os-terrain-option:hover,
+html[data-agent-os-embedded='true'] .agent-os-terrain-option:focus-visible,
+html[data-agent-os-embedded='true'] .agent-os-layer-option:hover,
+html[data-agent-os-embedded='true'] .agent-os-layer-option:focus-visible {
+  outline: 0;
+  background: rgba(255, 255, 255, 0.065);
+  color: #fff;
+}
+
+html[data-agent-os-embedded='true']
+  .agent-os-terrain-option[aria-pressed='true'],
+html[data-agent-os-embedded='true']
+  .agent-os-layer-option[aria-pressed='true'] {
+  background: rgba(95, 195, 200, 0.1);
+  color: #b6f3f3;
+}
+
+html[data-agent-os-embedded='true'] .agent-os-terrain-option .lucide,
+html[data-agent-os-embedded='true'] .agent-os-layer-option .lucide {
+  width: 16px;
+  height: 16px;
+}
+
+html[data-agent-os-embedded='true'] .agent-os-terrain-option > span {
+  display: grid;
+  gap: 2px;
+}
+
+html[data-agent-os-embedded='true'] .agent-os-terrain-option b,
+html[data-agent-os-embedded='true'] .agent-os-layer-option span {
+  font: 520 12px/1.2 var(--font-sans);
+}
+
+html[data-agent-os-embedded='true'] .agent-os-terrain-option small {
+  color: rgba(247, 248, 248, 0.4);
+  font: 450 10px/1.15 var(--font-sans);
+}
+
+html[data-agent-os-embedded='true'] .agent-os-terrain-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
+html[data-agent-os-embedded='true'] .agent-os-terrain-option i,
+html[data-agent-os-embedded='true'] .agent-os-layer-option i {
+  width: 8px;
+  height: 8px;
+  justify-self: end;
+  border: 1px solid rgba(247, 248, 248, 0.2);
+  border-radius: 50%;
+}
+
+html[data-agent-os-embedded='true']
+  .agent-os-terrain-option[aria-pressed='true']
+  i,
+html[data-agent-os-embedded='true']
+  .agent-os-layer-option[aria-pressed='true']
+  i {
+  border-color: #68d3da;
+  background: #68d3da;
+  box-shadow: 0 0 0 3px rgba(104, 211, 218, 0.12);
+}
+
+html[data-agent-os-embedded='true']
+  #agent-os-command.is-open
+  .agent-os-command-list:not(:empty) {
+  display: grid;
+}
+
+html[data-agent-os-embedded='true'] .agent-os-command-option {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.62fr) 1fr;
+  gap: 16px;
+  align-items: center;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #f7f8f8;
+  text-align: left;
+  cursor: pointer;
+}
+
+html[data-agent-os-embedded='true'] .agent-os-command-option:hover,
+html[data-agent-os-embedded='true'] .agent-os-command-option:focus-visible {
+  outline: 0;
+  background: rgba(255, 255, 255, 0.075);
+}
+
+html[data-agent-os-embedded='true'] .agent-os-command-option span {
+  font: 550 13px/1.25 var(--font-sans);
+}
+
+html[data-agent-os-embedded='true'] .agent-os-command-option small {
+  color: rgba(247, 248, 248, 0.48);
+  font: 450 12px/1.25 var(--font-sans);
+}
+
+html[data-agent-os-embedded='true'] .agent-os-command-status {
+  position: absolute;
+  right: 9px;
+  bottom: -19px;
+  max-width: calc(100% - 18px);
+  overflow: hidden;
+  color: rgba(247, 248, 248, 0.52);
+  font: 500 11px/1.2 var(--font-sans);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-agent-os-embedded='true']
+  .agent-os-command-status[data-state='error'] {
+  color: #ff9d9d;
+}
+
+@media (max-width: 700px) {
+  html[data-agent-os-embedded='true'] #agent-os-command {
+    bottom: max(12px, env(safe-area-inset-bottom));
+    width: calc(100vw - 24px);
+  }
+
+  html[data-agent-os-embedded='true'] .agent-os-command-form {
+    grid-template-columns: 22px minmax(0, 1fr) 38px auto;
+    min-height: 48px;
+    border-radius: 12px;
+  }
+
+  html[data-agent-os-embedded='true'] .agent-os-command-form kbd {
+    display: none;
+  }
+
+  html[data-agent-os-embedded='true'] .agent-os-command-list {
+    max-height: min(240px, calc(100vh - 96px));
+    overflow-y: auto;
+  }
+
+  html[data-agent-os-embedded='true'] .agent-os-layer-popover {
+    max-height: min(260px, calc(100vh - 96px));
+    overflow-y: auto;
+  }
+
+  html[data-agent-os-embedded='true'] .agent-os-terrain-grid,
+  html[data-agent-os-embedded='true'] .agent-os-layer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  html[data-agent-os-embedded='true'] .agent-os-command-option {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-agent-os-embedded='true'] #agent-os-command,
+  html[data-agent-os-embedded='true'] #agent-os-command * {
+    scroll-behavior: auto;
+    transition: none !important;
+  }
+}

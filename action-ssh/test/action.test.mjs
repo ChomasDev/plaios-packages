@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { JevSystem1 } from "@agent-os/system1-jev";
 
 import { parseDevices, sshArguments, SshCapability, SshJevCapability } from "../dist/src/index.js";
 
@@ -96,12 +97,11 @@ test("Jev capability opens Safari on the named Mac", async () => {
   const action = new SshJevCapability({
     env: { get: () => undefined },
     devices,
-    apiKey: "test",
     ssh: async (request) => {
       calls.push(request);
       return { stdout: "", stderr: "", code: 0 };
     },
-    typesafeFetch: async () =>
+    system1: new JevSystem1({ apiKey: "test", fetch: async () =>
       Response.json({
         model: "jev-latest",
         answers: {
@@ -110,7 +110,7 @@ test("Jev capability opens Safari on the named Mac", async () => {
           "dev:linux-box": { type: "noul", noul: 0.1 },
         },
         usage: { input_tokens: 1, output_tokens: 1 },
-      }),
+      }) }),
   });
 
   const result = await action.execute({ text: "Apri Safari sul Mac" }, context);
@@ -184,7 +184,6 @@ test("Jev capability remembers a protocol without calling SSH", async () => {
   const action = new SshJevCapability({
     env: { get: () => undefined },
     devices,
-    apiKey: "test",
     memory: {
       async upsertNode(node) {
         stored.push(node);
@@ -197,9 +196,9 @@ test("Jev capability remembers a protocol without calling SSH", async () => {
     ssh: async () => {
       throw new Error("SSH should not run while remembering a protocol");
     },
-    typesafeFetch: async () => {
+    system1: new JevSystem1({ apiKey: "test", fetch: async () => {
       throw new Error("Jev should not run while remembering a protocol");
-    },
+    } }),
   });
 
   const result = await action.execute({
@@ -218,7 +217,6 @@ test("Jev capability ignores a non-remote protocol", async () => {
   const action = new SshJevCapability({
     env: { get: () => undefined },
     devices,
-    apiKey: "test",
     memory: {
       async listNodes() {
         return [{
@@ -234,9 +232,9 @@ test("Jev capability ignores a non-remote protocol", async () => {
     ssh: async () => {
       throw new Error("SSH should not run for a lighting protocol");
     },
-    typesafeFetch: async () => {
+    system1: new JevSystem1({ apiKey: "test", fetch: async () => {
       throw new Error("Jev should not run for a non-remote protocol");
-    },
+    } }),
   });
 
   const result = await action.execute({ text: "protocollo ragazza in casa" }, context);
@@ -249,7 +247,6 @@ test("Jev capability expands a stored protocol and opens the URL", async () => {
   const action = new SshJevCapability({
     env: { get: () => undefined },
     devices,
-    apiKey: "test",
     memory: {
       async listNodes() {
         return [{
@@ -267,9 +264,9 @@ test("Jev capability expands a stored protocol and opens the URL", async () => {
       calls.push(request);
       return { stdout: "", stderr: "", code: 0 };
     },
-    typesafeFetch: async () => {
+    system1: new JevSystem1({ apiKey: "test", fetch: async () => {
       throw new Error("Jev should not run for a URL protocol");
-    },
+    } }),
   });
 
   const result = await action.execute({ text: "portocollo agentos" }, context);

@@ -1,7 +1,7 @@
 schemaVersion: 1
 id: perplexity-search
 name: Perplexity Search
-version: 0.1.1
+version: 0.2.2
 description: Live web search through the Perplexity Search API
 interfaces:
   - id: perplexity-search.action
@@ -14,6 +14,7 @@ interfaces:
     surfaces: [network, web]
     permissions: [network.http, web.search]
     required: [env]
+    optional: [database]
     config:
       - { key: apiKey, env: PERPLEXITY_API_KEY, type: secret, required: true, description: Perplexity API key }
     capability:

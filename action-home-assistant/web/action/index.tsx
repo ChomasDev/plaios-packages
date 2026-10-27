@@ -20,13 +20,17 @@ import type {
   HomeAssistantDashboard,
   HomeAssistantEntity,
 } from "../../src/index.js";
+import { CameraCard } from "./chat/camera-card.js";
+import { HomeCameras } from "./chat/home-cameras.js";
+import { HomeDevices } from "./chat/home-devices.js";
+import { reading } from "./chat/readings.js";
+import type { HomeAssistantData } from "./chat/types.js";
+import { HOME_CAMERAS_OPENUI, HOME_DEVICES_OPENUI } from "./openui.js";
 
-interface HomeAssistantData extends HomeAssistantDashboard {
-  actions: {
-    refresh(): Promise<HomeAssistantDashboard>;
-    control(input: HomeAssistantControlInput): Promise<HomeAssistantDashboard>;
-  };
-}
+export const openui = [
+  { ...HOME_CAMERAS_OPENUI, component: HomeCameras },
+  { ...HOME_DEVICES_OPENUI, component: HomeDevices },
+];
 
 const domainLabels: Record<string, string> = {
   light: "Lights",
@@ -39,6 +43,9 @@ const domainLabels: Record<string, string> = {
   script: "Scripts",
   input_boolean: "Helpers",
   media_player: "Media",
+  camera: "Cameras",
+  sensor: "Sensors",
+  binary_sensor: "Detectors",
 };
 
 export default function HomeAssistantAction({
@@ -153,6 +160,7 @@ export default function HomeAssistantAction({
               <EntityCard
                 key={entity.entityId}
                 entity={entity}
+                snapshot={data?.queries?.snapshot}
                 busy={busy === entity.entityId}
                 onControl={control}
               />
@@ -188,10 +196,12 @@ export default function HomeAssistantAction({
 
 function EntityCard({
   entity,
+  snapshot,
   busy,
   onControl,
 }: {
   entity: HomeAssistantEntity;
+  snapshot?: NonNullable<HomeAssistantData["queries"]>["snapshot"];
   busy: boolean;
   onControl(input: HomeAssistantControlInput): Promise<void>;
 }) {
@@ -217,6 +227,7 @@ function EntityCard({
         <span className="ha-state">{busy ? "Working…" : entity.state}</span>
       </header>
       <div className="ha-entity-body">
+        {entity.domain === "camera" ? <CameraPreview entity={entity} snapshot={snapshot} /> : null}
         <EntityControls entity={entity} value={value} option={option} busy={busy} setValue={setValue} setOption={setOption} send={send} />
       </div>
       <footer>
@@ -298,7 +309,16 @@ function EntityControls({
   if (entity.domain === "scene" || entity.domain === "script") {
     return <button className="ha-primary-control" type="button" disabled={disabled} onClick={() => send("activate")}>Activate</button>;
   }
+  if (entity.domain === "sensor" || entity.domain === "binary_sensor") {
+    return <div className="ha-temperature"><span>{reading(entity)}</span></div>;
+  }
+  if (entity.domain === "camera") return null;
   return <p className="ha-no-controls">No controls available for this entity.</p>;
+}
+
+function CameraPreview({ entity, snapshot }: { entity: HomeAssistantEntity; snapshot?: NonNullable<HomeAssistantData["queries"]>["snapshot"] }) {
+  const [expanded, setExpanded] = useState(false);
+  return <div className="ha-cams is-single"><CameraCard entity={entity} snapshot={snapshot} index={0} expanded={expanded} onToggle={() => setExpanded(!expanded)} /></div>;
 }
 
 function RangeControl({ label, value, suffix, min = 0, max = 100, step = 1, disabled, onChange, onApply }: { label: string; value: number; suffix: string; min?: number; max?: number; step?: number; disabled: boolean; onChange(value: number): void; onApply(): void }) {
@@ -334,7 +354,7 @@ function isActive(entity: HomeAssistantEntity): boolean {
 }
 
 function domainIcon(domain: string): string {
-  return ({ light: "☼", switch: "⏻", fan: "✣", cover: "↕", lock: "◇", climate: "≋", scene: "✦", script: "▶", input_boolean: "◉", media_player: "▣" } as Record<string, string>)[domain] ?? "•";
+  return ({ light: "☼", switch: "⏻", fan: "✣", cover: "↕", lock: "◇", climate: "≋", scene: "✦", script: "▶", input_boolean: "◉", media_player: "▣", camera: "◎", sensor: "◔", binary_sensor: "◐" } as Record<string, string>)[domain] ?? "•";
 }
 
 function formatTime(value?: string): string {

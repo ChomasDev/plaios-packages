@@ -1,0 +1,51 @@
+schemaVersion: 1
+id: voice-live
+name: Live Voice
+version: 0.1.2
+description: Talk to Agent OS in real time from the browser; the voice model calls every registered capability as a tool
+interfaces:
+  - id: voice-live.input
+    kind: input
+    name: VoiceLiveInput
+    entry: .
+    export: .
+    className: VoiceLiveInput
+    description: OpenAI Realtime voice session (WebRTC) with all Agent OS capabilities exposed as tools
+    channel: voice-live
+    surfaces: [web, network]
+    permissions: [network.outbound, microphone]
+    required: [discovery]
+    config:
+      - key: apiKey
+        env: OPENAI_API_KEY
+        type: secret
+        required: true
+        description: OpenAI API key used to mint short-lived Realtime client secrets
+      - key: model
+        env: VOICE_LIVE_MODEL
+        type: string
+        required: false
+        default: gpt-realtime
+        description: Realtime model id
+      - key: voice
+        env: VOICE_LIVE_VOICE
+        type: string
+        required: false
+        default: marin
+        description: Output voice
+      - key: instructions
+        env: VOICE_LIVE_INSTRUCTIONS
+        type: string
+        required: false
+        description: Extra system instructions for the voice agent
+      - key: userId
+        env: AGENT_OS_USER_ID
+        type: string
+        required: false
+        description: User id attached to capability calls
+    startup:
+      when: ifConfigured
+    web:
+      entry: ./web/input
+      export: default
+      styles: ./web/styles.css

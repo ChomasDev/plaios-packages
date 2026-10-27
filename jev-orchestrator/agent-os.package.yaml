@@ -1,0 +1,33 @@
+schemaVersion: 1
+id: jev-orchestrator
+name: JevOrhcestator
+version: 0.1.9
+description: TypeSafe Jev router that selects capabilities and output channels
+interfaces:
+  - id: jev-orchestrator.orchestrator
+    kind: orchestrator
+    name: JevOrhcestatorOrchestrator
+    entry: .
+    export: .
+    className: JevOrhcestatorOrchestrator
+    description: Chooses capability ids and an output channel with System 1 (Jev) or System 2 judgments. Looks up protocol nodes in graph memory before routing, then sends matching commands directly to capabilities.
+    required: [discovery, system2]
+    optional: [system1]
+    config:
+      - key: maxCapabilities
+        type: number
+        required: false
+        default: 50
+        description: Maximum capabilities included in one routing decision
+      - key: system1Instance
+        type: string
+        required: false
+        description: "instanceId of the System 1 component (optional; default: the first system1)"
+      - key: system2Instance
+        type: string
+        required: false
+        description: "instanceId of the System 2 component, used when System 1 is missing or fails (default: the routing or first system2)"
+    web:
+      entry: ./web/orchestrator
+      export: default
+      styles: ./web/styles.css

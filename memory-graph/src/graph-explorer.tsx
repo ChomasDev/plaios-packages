@@ -11,7 +11,7 @@ import {
   type MemoryEdgeAttributes,
   type MemoryNodeAttributes,
 } from "./graph-view-model.js";
-import { installNodeDragging } from "./graph-dragging.js";
+import { installNodeDragging, type ForceLayout } from "./graph-dragging.js";
 
 export function GraphExplorer({
   nodes,
@@ -35,7 +35,7 @@ export function GraphExplorer({
     MemoryNodeAttributes,
     MemoryEdgeAttributes
   > | null>(null);
-  const layoutRef = useRef<ForceLayout | null>(null);
+  const layoutRef = useRef<(ForceLayout & { kill(): void }) | null>(null);
   const [running, setRunning] = useState(true);
   const [hoveredId, setHoveredId] = useState<string>();
 
@@ -206,14 +206,7 @@ export function GraphExplorer({
   );
 }
 
-interface ForceLayout {
-  isRunning(): boolean;
-  start(): void;
-  stop(): void;
-  kill(): void;
-}
-
 type ForceLayoutConstructor = new (
   graph: ReturnType<typeof buildGraph>,
   options: { settings: Record<string, boolean | number> },
-) => ForceLayout;
+) => ForceLayout & { kill(): void };

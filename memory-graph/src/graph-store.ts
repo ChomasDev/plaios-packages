@@ -87,14 +87,9 @@ export class GraphStore {
     data: Record<string, unknown>,
     updatedAt: Date,
   ): Promise<void> {
-    const detail: StoredDetail = {
-      id: `${nodeId}:${type}`,
-      nodeId,
-      type,
-      data,
-      updatedAt,
-    };
-    await this.database.set(TABLES.details, detail.id, detail);
+    const id = `${nodeId}:${type}`;
+    const detail: StoredDetail = { id, nodeId, type, data, updatedAt };
+    await this.database.set(TABLES.details, id, detail);
   }
 
   async saveEdge(edge: StoredEdge): Promise<void> {
@@ -124,25 +119,20 @@ export class GraphStore {
     await this.database.delete(TABLES.details, {});
     await this.database.delete(TABLES.nodes, {});
 
-    if (this.vectorStore?.clear) {
-      await this.vectorStore.clear();
-      return nodes.length;
-    }
-    if (this.vectorStore) {
-      await Promise.all(nodes.map((node) => this.vectorStore!.remove(node.id)));
+    const vectorStore = this.vectorStore;
+    if (vectorStore?.clear) await vectorStore.clear();
+    else if (vectorStore) {
+      await Promise.all(nodes.map((node) => vectorStore.remove(node.id)));
     }
     return nodes.length;
   }
 
+  /** Undefined when no vector store is configured. */
   vectorQuery(
     vector: readonly number[],
     limit: number,
     filter: Readonly<Record<string, unknown>>,
   ) {
     return this.vectorStore?.query(vector, limit, filter);
-  }
-
-  hasVectorStore(): boolean {
-    return this.vectorStore !== undefined;
   }
 }

@@ -1,23 +1,36 @@
-import { choice, noul, TypeSafeClient, type Fetch } from "@typesafe-ai/sdk";
+import {
+  choice,
+  compactTurns,
+  extractUrl,
+  findMatchingProtocol,
+  isRemoteInstruction,
+  noul,
+  noulOf,
+  parseProtocolRemember,
+  protocolConfirmation,
+  saveProtocol,
+  type ProtocolMemory,
+} from "@agent-os/systems";
 import type {
   Capability,
   CapabilityExecutionContext,
   CapabilityManifest,
   CapabilityResult,
+  System1,
+  System2,
+  SystemAnswers,
+  SystemQuestions,
 } from "@agent-os/core/domain";
 
-import { SshCapability, type SshCapabilityOptions, type SshControlOutput } from "./capability.js";
-import type { RemoteAction } from "./commands.js";
-import { findDevice, publicDevices } from "./devices.js";
 import {
-  extractUrl,
-  findMatchingProtocol,
-  isRemoteInstruction,
-  parseProtocolRemember,
-  protocolConfirmation,
-  saveProtocol,
-  type ProtocolMemory,
-} from "./protocol.js";
+  SshCapability,
+  errorMessage,
+  failure,
+  type SshCapabilityOptions,
+  type SshControlOutput,
+} from "./capability.js";
+import type { RemoteAction } from "./commands.js";
+import { findDevice, publicDevices, type RemoteDevice } from "./devices.js";
 
 export interface SshJevInput {
   text: string;
@@ -35,8 +48,8 @@ export interface SshJevOutput {
 }
 
 export interface SshJevCapabilityOptions extends SshCapabilityOptions {
-  apiKey?: string;
-  typesafeFetch?: Fetch;
+  system1?: System1;
+  system2?: System2;
   memory?: ProtocolMemory;
 }
 
@@ -58,6 +71,28 @@ const ACTIONS = {
   osascript: "Run AppleScript",
   none: "Not a remote-computer command",
 } as const;
+
+const DOCS = `# control_remote_computer_jev
+
+Takes the user's natural-language request about a paired Mac or Linux computer and runs it over SSH. System 1 (Jev) picks the action and the device (System 2 when System 1 is missing or fails); it then calls the same commands as \`control_remote_computer\`.
+
+## When to use
+- Default for remote-computer requests phrased by the user: "apri Safari sul Mac", "blocca il Mac dello studio", "volume al 20%", "open https://example.com on the Mac".
+- Also saves and replays user protocols ("ricorda che ..."): pass that text as-is.
+- Prefer \`control_remote_computer\` when you need an exact shell command, AppleScript or a specific device id that the text does not express well.
+- Not for Home Assistant devices or for the Agent OS server itself.
+
+## Inputs
+- \`{"text": "Apri Safari sul Mac"}\`
+- \`{"text": "e chiudilo", "history": [{"role": "user", "content": "Apri Safari sul Mac"}]}\` for follow-ups.
+Pass the user's words, not a rewritten command. A URL plus "apri/open" opens it directly on the (single or named) computer.
+
+## Limits and failures
+- Call timeout 25s. With several computers and no clear target it returns \`action\` set and a "Which computer?" \`summary\` without running anything: relay the question.
+- \`action: "none"\` means the text was not a remote-computer command: answer normally or use another capability.
+- \`JEV_REQUEST_FAILED\` (retryable) when neither System 1 nor System 2 answered; SSH errors are the same as \`control_remote_computer\`.
+- No confirmation step: shell commands run immediately. Confirm destructive requests with the user before calling.
+`;
 
 const manifest: CapabilityManifest = {
   id: "ssh.jev",
@@ -120,15 +155,22 @@ export class SshJevCapability implements Capability<SshJevInput, SshJevOutput> {
   readonly manifest = manifest;
   private readonly control: SshCapability;
   private readonly memory: ProtocolMemory | undefined;
-  private readonly apiKey: string | undefined;
-  private readonly typesafeFetch: Fetch | undefined;
-  private client: TypeSafeClient | undefined;
+  private readonly system1: System1 | undefined;
+  private readonly system2: System2 | undefined;
 
   constructor(options: SshJevCapabilityOptions) {
     this.control = new SshCapability(options);
     this.memory = options.memory;
-    this.apiKey = options.apiKey ?? options.env.get("JEV_API_KEY") ?? options.env.get("TYPESAFE_API_KEY");
-    this.typesafeFetch = options.typesafeFetch;
+    this.system1 = options.system1;
+    this.system2 = options.system2;
+  }
+
+  uiComponents() {
+    return [];
+  }
+
+  docs(): string {
+    return DOCS;
   }
 
   microfrontendData() {
@@ -142,119 +184,73 @@ export class SshJevCapability implements Capability<SshJevInput, SshJevOutput> {
     const incoming = input.text?.trim() ?? "";
     if (!incoming) return failure("VALIDATION_ERROR", "A remote-computer request is required");
 
+    const devices = this.control.listDevices();
     const remembered = parseProtocolRemember(incoming);
     if (remembered) {
       await saveProtocol(this.memory, context.userId, remembered);
-      return success({
-        deviceId: null,
-        action: "none",
-        devices: publicDevices(this.control.listDevices()),
-        stdout: "",
-        stderr: "",
-        summary: protocolConfirmation(remembered),
-      });
+      return noop(devices, protocolConfirmation(remembered));
     }
 
     const matched = await findMatchingProtocol(this.memory, context.userId, incoming);
     const text = matched?.expansion ?? incoming;
-    if (matched && !isRemoteInstruction(text)) {
-      return success({
-        deviceId: null,
-        action: "none",
-        devices: publicDevices(this.control.listDevices()),
-        stdout: "",
-        stderr: "",
-        summary: "",
-      });
-    }
-    const devices = this.control.listDevices();
+    if (matched && !isRemoteInstruction(text)) return noop(devices, "");
     if (devices.length === 0) {
-      return success({
-        deviceId: null,
-        action: "none",
-        devices: [],
-        stdout: "",
-        stderr: "",
-        summary: "Nessun computer è abbinato. Aggiungi host, utente e chiave SSH, poi installa Agent OS Remote sul Mac.",
-      });
+      return noop(devices, "Nessun computer è abbinato. Aggiungi host, utente e chiave SSH, poi installa Agent OS Remote sul Mac.");
     }
 
-    const history = compactTurns(input.history);
+    const history = compactTurns(input.history, 10);
     const directUrl = extractUrl(text);
     if (directUrl && /\b(apri|open|agentos|http)\b/i.test(text)) {
-      const device = devices.length === 1 ? devices[0] : findDevice(devices, namedDevice(text)) ?? devices[0];
-      if (!device) {
-        return success({
-          deviceId: null,
-          action: "open_url",
-          devices: publicDevices(devices),
-          stdout: "",
-          stderr: "",
-          summary: isItalian(text)
-            ? `Quale computer? Ho: ${devices.map((item) => item.name).join(", ")}.`
-            : `Which computer? I have: ${devices.map((item) => item.name).join(", ")}.`,
-        });
-      }
+      const device = (devices.length === 1 ? undefined : findDevice(devices, namedDevice(text))) ?? devices[0];
       return this.control.execute(
         { deviceId: device.id, action: "open_url", command: directUrl, text: directUrl },
         context,
       ) as Promise<CapabilityResult<SshJevOutput>>;
     }
 
-    let answers: Record<string, { type?: string; choice?: string; noul?: number }>;
+    let answers: SystemAnswers;
     try {
-      const response = await this.getClient().systemOne(
+      answers = await this.ask(
         {
-          state: {
-            text,
-            history,
-            devices: publicDevices(devices).map((device) => ({
-              id: device.id,
-              name: device.name,
-              host: device.host,
-              user: device.user,
-              port: device.port,
-              os: device.os,
-            })),
-          },
-          questions: {
-            action: choice(
-              "What remote-computer action should be taken for `text`? Use `history` for follow-ups. Prefer `none` if this is not about controlling a paired computer.",
-              ACTIONS,
-            ),
-            ...Object.fromEntries(
-              devices.map((device) => [
-                deviceQuestionId(device.id),
-                noul(
-                  `Does \`text\` (or \`history\`) target the computer "${device.name}" (${device.user}@${device.host}, ${device.os})?`,
-                ),
-              ]),
-            ),
-          },
+          text,
+          history,
+          devices: publicDevices(devices).map((device) => ({
+            id: device.id,
+            name: device.name,
+            host: device.host,
+            user: device.user,
+            port: device.port,
+            os: device.os,
+          })),
         },
-        { signal: context.signal },
+        {
+          action: choice(
+            "What remote-computer action should be taken for `text`? Use `history` for follow-ups. Prefer `none` if this is not about controlling a paired computer.",
+            ACTIONS,
+          ),
+          ...Object.fromEntries(
+            devices.map((device) => [
+              deviceQuestionId(device.id),
+              noul(
+                `Does \`text\` (or \`history\`) target the computer "${device.name}" (${device.user}@${device.host}, ${device.os})?`,
+              ),
+            ]),
+          ),
+        },
+        context.signal,
       );
-      answers = response.answers;
     } catch (error) {
-      return failure(
-        "JEV_REQUEST_FAILED",
-        error instanceof Error ? error.message : String(error),
-        true,
-      );
+      return failure("JEV_REQUEST_FAILED", errorMessage(error), true);
     }
 
     const action = selectedAction(answers.action?.choice);
     if (action === "none") {
-      return success({
-        deviceId: null,
-        action: "none",
-        devices: publicDevices(devices),
-        stdout: "",
-        stderr: "",
-        summary: isItalian(text)
+      return noop(
+        devices,
+        isItalian(text)
           ? "Non mi sembra un comando per un computer remoto."
           : "That doesn't look like a remote-computer command.",
-      });
+      );
     }
 
     const ranked = devices
@@ -263,16 +259,8 @@ export class SshJevCapability implements Capability<SshJevInput, SshJevOutput> {
       .sort((left, right) => right.noul - left.noul);
     const device = ranked[0]?.device ?? (devices.length === 1 ? devices[0] : findDevice(devices, namedDevice(text)));
     if (!device && action !== "list") {
-      return success({
-        deviceId: null,
-        action,
-        devices: publicDevices(devices),
-        stdout: "",
-        stderr: "",
-        summary: isItalian(text)
-          ? `Quale computer? Ho: ${devices.map((item) => item.name).join(", ")}.`
-          : `Which computer? I have: ${devices.map((item) => item.name).join(", ")}.`,
-      });
+      const names = devices.map((item) => item.name).join(", ");
+      return noop(devices, isItalian(text) ? `Quale computer? Ho: ${names}.` : `Which computer? I have: ${names}.`, action);
     }
 
     return this.control.execute(
@@ -288,14 +276,21 @@ export class SshJevCapability implements Capability<SshJevInput, SshJevOutput> {
     ) as Promise<CapabilityResult<SshJevOutput>>;
   }
 
-  private getClient(): TypeSafeClient {
-    if (!this.client) {
-      this.client = new TypeSafeClient({
-        ...(this.apiKey ? { apiKey: this.apiKey } : {}),
-        ...(this.typesafeFetch ? { fetch: this.typesafeFetch } : {}),
-      });
+  // System 1 is optional: without it, or when it fails, System 2 answers.
+  private async ask(
+    state: Record<string, unknown>,
+    questions: SystemQuestions,
+    signal?: AbortSignal,
+  ): Promise<SystemAnswers> {
+    if (this.system1) {
+      try {
+        return await this.system1.ask(state, questions, { signal });
+      } catch (error) {
+        if (!this.system2 || signal?.aborted) throw error;
+      }
     }
-    return this.client;
+    if (!this.system2) throw new Error("No System 1 or System 2 is configured");
+    return this.system2.ask(state, questions, { signal });
   }
 }
 
@@ -305,21 +300,6 @@ function selectedAction(value?: string): RemoteAction | "none" {
 
 function deviceQuestionId(id: string): string {
   return `dev:${id}`;
-}
-
-function noulOf(answers: Record<string, { type?: string; noul?: number }>, key: string): number {
-  const answer = answers[key];
-  return answer?.type === "noul" && typeof answer.noul === "number" ? answer.noul : 0;
-}
-
-function compactTurns(
-  value: SshJevInput["history"],
-): Array<{ role: string; content: string }> {
-  return (value ?? []).flatMap((entry) => {
-    const role = entry?.role?.trim();
-    const content = entry?.content?.trim();
-    return role && content ? [{ role, content }] : [];
-  }).slice(-10);
 }
 
 function namedDevice(text: string): string | undefined {
@@ -358,10 +338,14 @@ function isItalian(text: string): boolean {
   return /\b(apri|chiudi|sul|sulla|mac|computer|schermo|volume|blocca|esegui|ricorda|protocollo)\b/i.test(text);
 }
 
-function success(data: SshJevOutput): CapabilityResult<SshJevOutput> {
-  return { success: true, data };
-}
-
-function failure(code: string, message: string, retryable = false): CapabilityResult<never> {
-  return { success: false, error: { code, message, retryable } };
+// A reply that ran nothing over SSH.
+function noop(
+  devices: readonly RemoteDevice[],
+  summary: string,
+  action: RemoteAction | "none" = "none",
+): CapabilityResult<SshJevOutput> {
+  return {
+    success: true,
+    data: { deviceId: null, action, devices: publicDevices(devices), stdout: "", stderr: "", summary },
+  };
 }

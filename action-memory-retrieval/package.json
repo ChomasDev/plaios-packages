@@ -1,6 +1,6 @@
 {
   "name": "@agent-os/action-memory-retrieval",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Focused graph-memory retrieval action for Agent OS",
   "keywords": ["agent-os", "capability", "action", "memory", "graph", "retrieval"],
   "private": false,

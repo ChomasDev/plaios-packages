@@ -114,10 +114,9 @@ export class GraphRetriever {
         || right.node.weight - left.node.weight,
     );
   }
-
 }
 
-function adjacentNodeId(
+export function adjacentNodeId(
   edge: { sourceId: string; targetId: string },
   nodeId: string,
 ): string | undefined {

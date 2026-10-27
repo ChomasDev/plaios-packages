@@ -63,10 +63,8 @@ export function cosine(
   return dot / Math.sqrt(leftNorm * rightNorm);
 }
 
-export function lexicalScore(query: string, value: string): number {
-  return hybridLexicalScores(query, value).lexical;
-}
-
+// Exact channel rewards a contiguous run of meaningful terms (filler stripped),
+// so a single entity name such as "Alessia" still counts as an exact hit.
 export function hybridLexicalScores(
   query: string,
   value: string,
@@ -93,16 +91,7 @@ export function hybridLexicalScores(
   return { exact, lexical };
 }
 
-/**
- * Exact channel used by hybrid retrieval. It ignores conversational filler and
- * rewards a contiguous sequence of meaningful terms, including a single
- * entity name such as "Alessia".
- */
-export function exactPhraseScore(query: string, value: string): number {
-  return hybridLexicalScores(query, value).exact;
-}
-
-export function searchTerms(value: string): string[] {
+function searchTerms(value: string): string[] {
   const tokens = normalizedTokens(value).filter((token) =>
     (token.length >= 3 || SHORT_SEARCH_TERMS.has(token)) &&
     !SEARCH_STOPWORDS.has(token)

@@ -1,11 +1,11 @@
 schemaVersion: 1
 id: codex
 name: Codex
-version: 0.1.3
+version: 0.1.7
 description: Codex AI provider with a persistent app-server, structured tool calling, low-latency successful command completion, and safe runtime defaults
 interfaces:
   - id: codex.ai
-    kind: ai
+    kind: system2
     name: CodexProvider
     entry: .
     export: .

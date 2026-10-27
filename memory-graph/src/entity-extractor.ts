@@ -1,4 +1,5 @@
 import type { MemoryEntry } from "@agent-os/core/domain";
+import { isRecord } from "./graph-values.js";
 import {
   MemoryEdgeType,
   MemoryNodeType,
@@ -108,10 +109,6 @@ function deduplicate(mentions: readonly EntityMention[]): EntityMention[] {
     unique.set(key, current ? { ...current, data: { ...current.data, ...mention.data } } : { ...mention, name });
   }
   return [...unique.values()];
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function stringValue(value: unknown): string | undefined {

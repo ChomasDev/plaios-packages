@@ -1,0 +1,135 @@
+schemaVersion: 1
+id: action-gods-eye-view
+name: God's Eye View
+version: 0.8.0
+description: Run the native Mapbox 3D God's Eye View globe with Agent OS AI control and progressive geospatial layers
+interfaces:
+  - id: gods-eye-view.action
+    kind: action
+    name: GodsEyeViewCapability
+    entry: .
+    export: .
+    className: GodsEyeViewCapability
+    description: Runs and controls the native Mapbox 3D God's Eye View surface with live viewport-aware CCTV cameras
+    surfaces: [network, web, desktop, macos]
+    permissions: [network.http, network.ssh, remote.control, memory.write]
+    required: [env, memory]
+    config:
+      - key: baseUrl
+        env: GODS_EYE_VIEW_URL
+        type: string
+        required: false
+        default: http://localhost:4173
+        description: Local URL where this action serves its bundled God's Eye View app
+      - key: bundledServer
+        type: boolean
+        required: false
+        default: true
+        description: Start the vendored God's Eye View application automatically
+      - key: mapboxAccessToken
+        env: MAPBOX_ACCESS_TOKEN
+        type: secret
+        required: true
+        description: Public Mapbox token used by the native embedded globe, terrain, styles, and search
+      - key: mapboxStyle
+        env: MAPBOX_STYLE
+        type: string
+        required: false
+        default: mapbox/standard-satellite
+        description: Mapbox style in username/style-id format
+      - key: googleMapsApiKey
+        env: GOOGLE_MAPS_API_KEY
+        type: secret
+        required: false
+        description: Google Maps key for photorealistic 3D tiles
+      - key: cesiumIonToken
+        env: CESIUM_ION_TOKEN
+        type: secret
+        required: false
+        description: Cesium ion token for terrain and Bing imagery stacks
+      - key: openAiApiKey
+        env: OPENAI_API_KEY
+        type: secret
+        required: false
+        description: OpenAI API key for the upstream realtime voice interface
+      - key: protocolTrigger
+        type: string
+        required: false
+        default: occhio di dio
+        description: Phrase stored in procedural memory and routed to this action
+      - key: launchMode
+        type: string
+        required: false
+        default: auto
+        description: auto, ssh, local, or link
+      - key: defaultDeviceId
+        type: string
+        required: false
+        description: Paired Mac id or name used when opening the view
+      - key: devices
+        env: SSH_DEVICES
+        type: string
+        required: false
+        description: JSON array of paired SSH devices
+      - key: host
+        env: SSH_HOST
+        type: string
+        required: false
+        description: Hostname or IP of a single default Mac
+      - key: user
+        env: SSH_USER
+        type: string
+        required: false
+        description: SSH username for the default Mac
+      - key: port
+        env: SSH_PORT
+        type: number
+        required: false
+        default: 22
+        description: SSH port
+      - key: privateKeyPath
+        env: SSH_PRIVATE_KEY_PATH
+        type: string
+        required: false
+        description: Private key path used to reach the Mac
+      - key: privateKey
+        env: SSH_PRIVATE_KEY
+        type: secret
+        required: false
+        description: Private key contents when a path is not used
+      - key: geocoderUrl
+        type: string
+        required: false
+        default: https://nominatim.openstreetmap.org/search
+        description: Nominatim-compatible geocoding endpoint
+      - key: timeoutMs
+        type: number
+        required: false
+        default: 15000
+        description: Geocoding and remote-open timeout
+    capability:
+      id: gods-eye-view.open
+      version: 2.0.0
+      name: open_gods_eye_view
+      description: Control the complete bundled God's Eye View globe. Use for "occhio di dio" and requests to view, find, track, annotate, or analyze cameras, aircraft, vessels, satellites, earthquakes, traffic, radio, transit, fires, infrastructure, or places.
+      permissions: [network.http, network.ssh, remote.control]
+      tags:
+        [
+          occhio-di-dio,
+          gods-eye-view,
+          webview,
+          macos,
+          map,
+          globe,
+          cameras,
+          cctv,
+          flights,
+          vessels,
+          satellites,
+          earthquakes,
+          traffic,
+          radio,
+        ]
+      execution: { timeoutMs: 25000, idempotent: false }
+    startup: { when: always }
+    web: { entry: ./web/action, export: default, styles: ./web/styles.css }

@@ -1,6 +1,6 @@
 {
   "name": "@agent-os/memory-graph",
-  "version": "0.4.4",
+  "version": "0.5.0",
   "description": "Weighted, decaying, vector-ranked graph memory capability for Agent OS",
   "keywords": [
     "agent-os",
@@ -34,7 +34,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/build-web.mjs",
-    "test": "pnpm build && node --test dist/test/index.test.js",
+    "test": "pnpm build && node --test dist/test/index.test.js test/best-match.test.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {

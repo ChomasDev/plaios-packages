@@ -6,6 +6,9 @@ import type {
   Environment,
 } from "@agent-os/core/domain";
 
+import { filterByQuery } from "../web/action/entity-query.js";
+import { HOME_ASSISTANT_OPENUI } from "../web/action/openui.js";
+
 export type HomeAssistantAction =
   | "get_states"
   | "turn_on"
@@ -51,6 +54,7 @@ export interface HomeAssistantEntity {
   state: string;
   available: boolean;
   lastChanged: string;
+  area?: string;
   icon?: string;
   deviceClass?: string;
   unit?: string;
@@ -104,7 +108,38 @@ const legacyDefaultDomains = [
   "script",
   "input_boolean",
 ] as const;
-const defaultDomains = [...legacyDefaultDomains, "media_player"] as const;
+const defaultDomains = [...legacyDefaultDomains, "media_player", "camera", "sensor", "binary_sensor"] as const;
+/** Domains with readings only; get_states leaves them out unless a query asks for them, so the model's context stays small. */
+const READING_DOMAINS = new Set(["sensor", "binary_sensor"]);
+/** Domains that accept at least one control action. */
+export const CONTROLLABLE_DOMAINS: ReadonlySet<string> = new Set([...legacyDefaultDomains, "media_player"]);
+const SNAPSHOT_WIDTH = { card: 640, full: 1600 } as const;
+
+export interface CameraSnapshot { entityId: string; image: string; at: string }
+
+const DOCS = `# control_home_assistant
+
+Reads live Home Assistant states and calls one service on one exact entity: lights, switches, fans, TVs and media players, covers, locks, climate, scenes, scripts, input booleans. Cameras and sensors are readable only.
+
+## When to use
+- You need the exact entity list or state (\`get_states\`), or a precise action on a known \`entityId\`.
+- For a plain natural-language command ("spegni le luci dell'ufficio", several devices or several commands at once) prefer \`control_home_assistant_jev\`: it resolves names and areas itself.
+- Not for Macs/PCs (use the remote computer capabilities).
+
+## Inputs
+- \`{"entityId": null, "action": "get_states", "value": null, "option": null}\`: all controllable entities; put search text in \`option\` (name, area or id) to filter and to include sensor readings, e.g. \`"option": "temperatura"\`.
+- \`{"entityId": "light.kitchen", "action": "set_brightness", "value": 40, "option": null}\`
+- \`{"entityId": "media_player.living_room_tv", "action": "set_volume", "value": 20, "option": null}\`
+Never guess entity ids: call \`get_states\` first when you have not seen the id. \`value\` is 0-100 for brightness, position and volume, degrees for \`set_temperature\`; \`option\` holds the color for \`set_color\` and the mode for \`set_hvac_mode\`.
+
+## Chat components
+To show cameras or device tiles, write \`HomeCameras(...)\` / \`HomeDevices(...)\` in the answer instead of calling the tool: they load live data and have their own controls. After a control call, \`HomeDevices("", [ids])\` is a good way to show the result.
+
+## Limits and failures
+- Only entities in the configured domain allowlist are visible or controllable (\`ENTITY_DOMAIN_NOT_ALLOWED\`); unsupported action for a domain gives \`ACTION_NOT_SUPPORTED\`.
+- Requests time out after 10s by default; \`HOME_ASSISTANT_REQUEST_FAILED\` is retryable (Home Assistant down or entity unavailable).
+- No confirmation step: unlocking locks or opening covers/gates acts immediately. Confirm with the user when the request is ambiguous.
+`;
 
 const manifest: CapabilityManifest = {
   id: "home-assistant.control",
@@ -155,7 +190,7 @@ const manifest: CapabilityManifest = {
       },
       option: {
         type: ["string", "null"],
-        description: "Color name for set_color, HVAC mode for set_hvac_mode; otherwise null.",
+        description: "Color name for set_color, HVAC mode for set_hvac_mode, search text for get_states (name, area or entity id; needed to include sensor readings, e.g. \"temperatura\"); otherwise null.",
       },
     },
     required: ["entityId", "action", "value", "option"],
@@ -253,9 +288,21 @@ export class HomeAssistantCapability
     this.fetcher = options.fetch ?? globalThis.fetch;
   }
 
+  uiComponents() {
+    return HOME_ASSISTANT_OPENUI;
+  }
+
+  docs(): string {
+    return DOCS;
+  }
+
   async microfrontendData() {
     return {
       ...(await this.dashboard()),
+      // `queries` only read; the host does not refresh the bridge data after calling them.
+      queries: {
+        snapshot: async (entityId: string, size: keyof typeof SNAPSHOT_WIDTH = "card") => this.cameraSnapshot(entityId, size),
+      },
       actions: {
         refresh: async () => this.dashboard(),
         control: async (input: HomeAssistantControlInput) => {
@@ -303,7 +350,7 @@ export class HomeAssistantCapability
   ): Promise<CapabilityResult<HomeAssistantControlOutput>> {
     if (input.action === "get_states") {
       try {
-        const entities = await this.liveEntities(signal);
+        const entities = statesFor(await this.liveEntities(signal), input.option);
         return { success: true, data: { entities, count: entities.length, service: null } };
       } catch (error) {
         return failure("HOME_ASSISTANT_REQUEST_FAILED", errorMessage(error), true);
@@ -351,17 +398,49 @@ export class HomeAssistantCapability
   }
 
   private async liveEntities(signal?: AbortSignal): Promise<HomeAssistantEntity[]> {
-    const states = await this.request<HomeAssistantStateResponse[]>("/api/states", { signal });
+    const [states, areas] = await Promise.all([
+      this.request<HomeAssistantStateResponse[]>("/api/states", { signal }),
+      this.areas(signal),
+    ]);
     return states
       .filter((state) => this.entityDomains.has(domainOf(state.entity_id)))
-      .map(toEntity)
+      .map((state) => ({ ...toEntity(state), area: areas.get(state.entity_id) }))
       .sort(compareEntities);
+  }
+
+  /** Entity id -> area name. Areas only exist in templates, not in /api/states; without them, matching falls back to names. */
+  private async areas(signal?: AbortSignal): Promise<Map<string, string>> {
+    try {
+      const pairs = await this.request<Array<[string, string]>>("/api/template", { method: "POST", body: JSON.stringify({ template: AREAS_TEMPLATE }), signal });
+      return new Map(Array.isArray(pairs) ? pairs : []);
+    } catch {
+      return new Map();
+    }
+  }
+
+  /** A camera still as a data URL, so the browser never needs the Home Assistant token or a route to it. */
+  async cameraSnapshot(entityId: string, size: keyof typeof SNAPSHOT_WIDTH = "card"): Promise<CameraSnapshot> {
+    const id = entityId.trim().toLowerCase();
+    if (!/^camera\.[a-z0-9_]+$/.test(id)) throw new Error("A valid camera entity id is required");
+    if (!this.entityDomains.has("camera")) throw new Error("Entity domain \"camera\" is not enabled");
+    const width = SNAPSHOT_WIDTH[size] ?? SNAPSHOT_WIDTH.card;
+    const response = await this.fetchOk(`/api/camera_proxy/${encodeURIComponent(id)}?width=${width}`);
+    const type = response.headers.get("content-type")?.split(";")[0] || "image/jpeg";
+    if (!type.startsWith("image/")) throw new Error(`Camera returned ${type}, not an image`);
+    const image = Buffer.from(await response.arrayBuffer()).toString("base64");
+    return { entityId: id, image: `data:${type};base64,${image}`, at: new Date().toISOString() };
   }
 
   private async request<T = unknown>(
     path: string,
     init: RequestInit = {},
   ): Promise<T> {
+    const response = await this.fetchOk(path, init);
+    if (response.status === 204) return undefined as T;
+    return (await response.json()) as T;
+  }
+
+  private async fetchOk(path: string, init: RequestInit = {}): Promise<Response> {
     const timeoutSignal = AbortSignal.timeout(this.timeoutMs);
     const signal = init.signal
       ? AbortSignal.any([init.signal, timeoutSignal])
@@ -381,9 +460,15 @@ export class HomeAssistantCapability
         `Home Assistant returned ${response.status}${body ? `: ${body.slice(0, 240)}` : ""}`,
       );
     }
-    if (response.status === 204) return undefined as T;
-    return (await response.json()) as T;
+    return response;
   }
+}
+
+const AREAS_TEMPLATE = "{% set ns = namespace(items=[]) %}{% for s in states %}{% set a = area_name(s.entity_id) %}{% if a %}{% set ns.items = ns.items + [[s.entity_id, a]] %}{% endif %}{% endfor %}{{ ns.items | tojson }}";
+
+function statesFor(entities: HomeAssistantEntity[], query: string | null): HomeAssistantEntity[] {
+  if (query?.trim()) return filterByQuery(entities, query);
+  return entities.filter((entity) => !READING_DOMAINS.has(entity.domain));
 }
 
 interface ServiceCommand {
@@ -449,45 +534,25 @@ function serviceCommand(
   throw new Error(`${input.action} is not supported for ${domain}`);
 }
 
-const LIGHT_COLORS: Record<string, { rgb: [number, number, number]; labelIt: string; labelEn: string }> = {
-  white: { rgb: [255, 255, 255], labelIt: "bianco", labelEn: "white" },
-  bianco: { rgb: [255, 255, 255], labelIt: "bianco", labelEn: "white" },
-  bianca: { rgb: [255, 255, 255], labelIt: "bianco", labelEn: "white" },
-  bianche: { rgb: [255, 255, 255], labelIt: "bianco", labelEn: "white" },
-  bianchi: { rgb: [255, 255, 255], labelIt: "bianco", labelEn: "white" },
-  red: { rgb: [255, 0, 0], labelIt: "rosso", labelEn: "red" },
-  rosso: { rgb: [255, 0, 0], labelIt: "rosso", labelEn: "red" },
-  rossa: { rgb: [255, 0, 0], labelIt: "rosso", labelEn: "red" },
-  rosse: { rgb: [255, 0, 0], labelIt: "rosso", labelEn: "red" },
-  rossi: { rgb: [255, 0, 0], labelIt: "rosso", labelEn: "red" },
-  green: { rgb: [0, 255, 0], labelIt: "verde", labelEn: "green" },
-  verde: { rgb: [0, 255, 0], labelIt: "verde", labelEn: "green" },
-  verdi: { rgb: [0, 255, 0], labelIt: "verde", labelEn: "green" },
-  blue: { rgb: [0, 80, 255], labelIt: "blu", labelEn: "blue" },
-  blu: { rgb: [0, 80, 255], labelIt: "blu", labelEn: "blue" },
-  yellow: { rgb: [255, 220, 0], labelIt: "giallo", labelEn: "yellow" },
-  giallo: { rgb: [255, 220, 0], labelIt: "giallo", labelEn: "yellow" },
-  gialla: { rgb: [255, 220, 0], labelIt: "giallo", labelEn: "yellow" },
-  gialle: { rgb: [255, 220, 0], labelIt: "giallo", labelEn: "yellow" },
-  orange: { rgb: [255, 140, 0], labelIt: "arancione", labelEn: "orange" },
-  arancione: { rgb: [255, 140, 0], labelIt: "arancione", labelEn: "orange" },
-  pink: { rgb: [255, 105, 180], labelIt: "rosa", labelEn: "pink" },
-  rosa: { rgb: [255, 105, 180], labelIt: "rosa", labelEn: "pink" },
-  purple: { rgb: [160, 32, 240], labelIt: "viola", labelEn: "purple" },
-  viola: { rgb: [160, 32, 240], labelIt: "viola", labelEn: "purple" },
-  warm: { rgb: [255, 180, 80], labelIt: "caldo", labelEn: "warm white" },
-  calda: { rgb: [255, 180, 80], labelIt: "caldo", labelEn: "warm white" },
-  caldo: { rgb: [255, 180, 80], labelIt: "caldo", labelEn: "warm white" },
-  calde: { rgb: [255, 180, 80], labelIt: "caldo", labelEn: "warm white" },
-  cold: { rgb: [200, 220, 255], labelIt: "freddo", labelEn: "cool white" },
-  fredda: { rgb: [200, 220, 255], labelIt: "freddo", labelEn: "cool white" },
-  freddo: { rgb: [200, 220, 255], labelIt: "freddo", labelEn: "cool white" },
-  fredde: { rgb: [200, 220, 255], labelIt: "freddo", labelEn: "cool white" },
-};
+type LightColor = { rgb: [number, number, number]; labelIt: string; labelEn: string };
 
-export function resolveLightColor(value: string | null | undefined):
-  | { rgb: [number, number, number]; key: string; labelIt: string; labelEn: string }
-  | undefined {
+const LIGHT_COLOR_ROWS: Array<[LightColor, string[]]> = [
+  [{ rgb: [255, 255, 255], labelIt: "bianco", labelEn: "white" }, ["white", "bianco", "bianca", "bianche", "bianchi"]],
+  [{ rgb: [255, 0, 0], labelIt: "rosso", labelEn: "red" }, ["red", "rosso", "rossa", "rosse", "rossi"]],
+  [{ rgb: [0, 255, 0], labelIt: "verde", labelEn: "green" }, ["green", "verde", "verdi"]],
+  [{ rgb: [0, 80, 255], labelIt: "blu", labelEn: "blue" }, ["blue", "blu"]],
+  [{ rgb: [255, 220, 0], labelIt: "giallo", labelEn: "yellow" }, ["yellow", "giallo", "gialla", "gialle"]],
+  [{ rgb: [255, 140, 0], labelIt: "arancione", labelEn: "orange" }, ["orange", "arancione"]],
+  [{ rgb: [255, 105, 180], labelIt: "rosa", labelEn: "pink" }, ["pink", "rosa"]],
+  [{ rgb: [160, 32, 240], labelIt: "viola", labelEn: "purple" }, ["purple", "viola"]],
+  [{ rgb: [255, 180, 80], labelIt: "caldo", labelEn: "warm white" }, ["warm", "calda", "caldo", "calde"]],
+  [{ rgb: [200, 220, 255], labelIt: "freddo", labelEn: "cool white" }, ["cold", "fredda", "freddo", "fredde"]],
+];
+const LIGHT_COLORS: Record<string, LightColor> = Object.fromEntries(
+  LIGHT_COLOR_ROWS.flatMap(([color, names]) => names.map((name) => [name, color])),
+);
+
+export function resolveLightColor(value: string | null | undefined): (LightColor & { key: string }) | undefined {
   const token = value?.trim().toLowerCase();
   if (!token) return undefined;
   const color = LIGHT_COLORS[token];
@@ -520,12 +585,10 @@ function normalizeBaseUrl(value: string): string {
 function normalizeDomains(value: readonly string[] | string | undefined): string[] {
   const domains = typeof value === "string" ? value.split(",") : value ?? defaultDomains;
   const normalized = [...new Set(domains.map((domain) => domain.trim().toLowerCase()).filter(Boolean))];
-  if (sameDomains(normalized, legacyDefaultDomains)) normalized.push("media_player");
+  // Configs written before media_player existed keep working with TVs.
+  const legacy = normalized.length === legacyDefaultDomains.length && normalized.every((domain) => (legacyDefaultDomains as readonly string[]).includes(domain));
+  if (legacy) normalized.push("media_player");
   return normalized;
-}
-
-function sameDomains(left: readonly string[], right: readonly string[]): boolean {
-  return left.length === right.length && left.every((domain) => right.some((candidate) => candidate === domain));
 }
 
 function toEntity(state: HomeAssistantStateResponse): HomeAssistantEntity {
@@ -606,14 +669,10 @@ function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
 }
 
-function errorMessage(error: unknown): string {
+export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function failure(
-  code: string,
-  message: string,
-  retryable = false,
-): CapabilityResult<never> {
+export function failure(code: string, message: string, retryable = false): CapabilityResult<never> {
   return { success: false, error: { code, message, retryable } };
 }

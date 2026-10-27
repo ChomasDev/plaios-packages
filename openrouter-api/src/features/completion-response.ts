@@ -53,7 +53,7 @@ export async function writeSse(
   response.end();
 }
 
-export function splitStreamingChunk(
+function splitStreamingChunk(
   value: string,
   maxLength = 32,
 ): string[] {

@@ -1,7 +1,7 @@
 schemaVersion: 1
 id: agent-loop
 name: Default Agent Loop
-version: 0.1.5
+version: 0.2.0
 description: Runs the selected model with dynamically discovered capabilities
 interfaces:
   - id: agent-loop.agent
@@ -12,7 +12,7 @@ interfaces:
     className: DefaultAgentLoop
     description: Executes the model and capability loop for each incoming message
     surfaces: [local]
-    required: [ai, discovery]
+    required: [system2, discovery]
     config:
       - key: maxSteps
         type: number

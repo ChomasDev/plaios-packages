@@ -1,7 +1,7 @@
 schemaVersion: 1
 id: action-ssh
 name: Remote Computers
-version: 0.1.7
+version: 0.2.0
 description: Pair and control Macs and Linux computers over SSH, including natural-language Jev commands
 interfaces:
   - id: ssh.control
@@ -72,10 +72,11 @@ interfaces:
     entry: .
     export: .
     className: SshJevCapability
-    description: Natural-language remote computer control with TypeSafe Jev
+    description: Natural-language remote computer control with System 1 (Jev) and System 2
     surfaces: [network, web, desktop]
     permissions: [network.ssh, remote.control]
-    required: [env]
+    required: [env, system2]
+    optional: [system1]
     config:
       - key: devices
         env: SSH_DEVICES
@@ -113,11 +114,14 @@ interfaces:
         required: false
         default: 15000
         description: SSH command timeout
-      - key: apiKey
-        env: JEV_API_KEY
-        type: secret
+      - key: system1Instance
+        type: string
         required: false
-        description: TypeSafe Jev API key used to interpret the natural-language command
+        description: "instanceId of the System 1 component (optional; default: the first system1)"
+      - key: system2Instance
+        type: string
+        required: false
+        description: "instanceId of the System 2 component, used when System 1 is missing or fails (default: the routing or first system2)"
     capability:
       id: ssh.jev
       version: 1.0.0

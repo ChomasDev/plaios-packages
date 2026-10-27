@@ -1,4 +1,4 @@
-export interface TelegramMessageDto {
+interface TelegramMessageDto {
   id: string;
   sessionId: string;
   userId?: string;
@@ -12,7 +12,7 @@ export interface TelegramInputData {
   messages?: readonly TelegramMessageDto[];
 }
 
-export interface TelegramDeliveryDto {
+interface TelegramDeliveryDto {
   id: string;
   chatId: string;
   preview: string;

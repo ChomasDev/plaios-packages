@@ -1,8 +1,8 @@
 schemaVersion: 1
 id: action-home-assistant
 name: Home Assistant
-version: 0.1.7
-description: Discover and control Home Assistant lights, switches, TVs, media players, covers, climate, and other entities
+version: 0.2.1
+description: Discover and control Home Assistant lights, switches, TVs, media players, covers, climate, cameras, sensors, and other entities
 interfaces:
   - id: home-assistant.action
     kind: action
@@ -28,7 +28,7 @@ interfaces:
       - key: entityDomains
         type: string
         required: false
-        default: light,switch,fan,cover,lock,climate,scene,script,input_boolean,media_player
+        default: light,switch,fan,cover,lock,climate,scene,script,input_boolean,media_player,camera,sensor,binary_sensor
         description: Comma-separated entity domains visible to and controllable by this package
       - key: timeoutMs
         type: number
@@ -51,10 +51,11 @@ interfaces:
     entry: .
     export: .
     className: HomeAssistantJevCapability
-    description: Executes natural-language Home Assistant commands with TypeSafe Jev, without a generative model
+    description: Executes natural-language Home Assistant commands with System 1 (Jev) and System 2, without a generative model
     surfaces: [network, web, smart-home]
     permissions: [network.http, home-assistant.control]
-    required: [env]
+    required: [env, system2]
+    optional: [system1]
     config:
       - key: baseUrl
         env: HOME_ASSISTANT_URL
@@ -69,18 +70,21 @@ interfaces:
       - key: entityDomains
         type: string
         required: false
-        default: light,switch,fan,cover,lock,climate,scene,script,input_boolean,media_player
+        default: light,switch,fan,cover,lock,climate,scene,script,input_boolean,media_player,camera,sensor,binary_sensor
         description: Comma-separated entity domains visible to and controllable by this package
       - key: timeoutMs
         type: number
         required: false
         default: 10000
         description: Home Assistant request timeout in milliseconds
-      - key: apiKey
-        env: JEV_API_KEY
-        type: secret
+      - key: system1Instance
+        type: string
         required: false
-        description: TypeSafe Jev API key used to interpret the natural-language command
+        description: "instanceId of the System 1 component (optional; default: the first system1)"
+      - key: system2Instance
+        type: string
+        required: false
+        description: "instanceId of the System 2 component, used when System 1 is missing or fails (default: the routing or first system2)"
     capability:
       id: home-assistant.jev
       version: 1.0.0

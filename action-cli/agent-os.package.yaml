@@ -1,7 +1,7 @@
 schemaVersion: 1
 id: action-cli
 name: CLI Inspector
-version: 0.1.2
+version: 0.2.0
 description: Shell-free, allowlisted inspection commands with workspace and secret boundaries
 interfaces:
   - id: action-cli.action
@@ -34,7 +34,7 @@ interfaces:
       id: cli.run-command
       version: 1.0.0
       name: run_cli_command
-      description: Run any CLI command on the Agent OS server, including ssh to remote servers; only configured executables are allowed.
+      description: Run one allowlisted executable on the Agent OS server, without a shell; only configured executables are allowed.
       permissions: [cli.execute, filesystem.read]
       tags: [cli, command, local, filesystem, packages, processes]
       execution: { timeoutMs: 5000, idempotent: true }

@@ -32,7 +32,7 @@ export interface ScpRequest {
 
 export type ScpRunner = (request: ScpRequest) => Promise<void>;
 
-export function sshArguments(device: RemoteDevice, command: string, keyPath: string): string[] {
+function keyOptions(keyPath: string): string[] {
   return [
     "-F", "/dev/null",
     "-o", "BatchMode=yes",
@@ -41,10 +41,11 @@ export function sshArguments(device: RemoteDevice, command: string, keyPath: str
     "-o", "ConnectTimeout=8",
     "-o", "PreferredAuthentications=publickey",
     "-i", keyPath,
-    "-p", String(device.port),
-    `${device.user}@${device.host}`,
-    command,
   ];
+}
+
+export function sshArguments(device: RemoteDevice, command: string, keyPath: string): string[] {
+  return [...keyOptions(keyPath), "-p", String(device.port), `${device.user}@${device.host}`, command];
 }
 
 export async function runSsh(request: SshExecRequest): Promise<SshExecResult> {
@@ -84,31 +85,16 @@ export function scpArguments(
   localPath: string,
   keyPath: string,
 ): string[] {
-  return [
-    "-F", "/dev/null",
-    "-o", "BatchMode=yes",
-    "-o", "IdentitiesOnly=yes",
-    "-o", "StrictHostKeyChecking=accept-new",
-    "-o", "ConnectTimeout=8",
-    "-o", "PreferredAuthentications=publickey",
-    "-i", keyPath,
-    "-P", String(device.port),
-    `${device.user}@${device.host}:${remotePath}`,
-    localPath,
-  ];
+  return [...keyOptions(keyPath), "-P", String(device.port), `${device.user}@${device.host}:${remotePath}`, localPath];
 }
 
 export async function runScp(request: ScpRequest): Promise<void> {
   const key = await materializeKey(request.device);
   try {
-    const options: ExecFileOptions = {
-      timeout: request.timeoutMs,
-      windowsHide: true,
-    };
     await execFileAsync(
       "scp",
       scpArguments(request.device, request.remotePath, request.localPath, key.path),
-      options,
+      { timeout: request.timeoutMs, windowsHide: true },
     );
   } finally {
     await key.cleanup();

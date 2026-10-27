@@ -1,0 +1,23 @@
+node_modules
+dist
+.env
+*.log
+screenshots/
+qa-shots/
+output/
+.gev-logs/
+.gev-cache/
+.DS_Store
+.gstack/
+3d-models/
+pinokio/ENVIRONMENT
+pinokio/.installed
+
+# Not needed at runtime inside the Agent OS package
+docs/
+private/
+.gev-cache/
+.gev-logs/
+.github/
+.agents/
+pinokio/
