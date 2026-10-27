@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.DS_Store
+action-gods-eye-view/vendor/gods-eye-view/private/
+action-gods-eye-view/vendor/gods-eye-view/docs/media/
