@@ -1,7 +1,7 @@
 schemaVersion: 1
 id: pattern-predictor
 name: Pattern Predictor
-version: 0.1.2
+version: 0.1.3
 description: Learns recurring requests from chat history and asks the user before the usual time
 interfaces:
   - id: pattern-predictor.input

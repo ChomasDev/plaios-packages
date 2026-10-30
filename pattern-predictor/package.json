@@ -1,6 +1,6 @@
 {
   "name": "@plaios/pattern-predictor",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Learns recurring requests from chat history and proactively offers them for PLAIOS",
   "keywords": [
     "plaios",

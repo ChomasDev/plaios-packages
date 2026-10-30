@@ -87,7 +87,7 @@ Drives T3 Code on the user's Mac (over Tailscale): coding agents run there, in t
 - Anything else T3 can do (worktrees, PRs, scheduling, answering an agent's approval request with \`t3_pending_request\`): \`{"action":"call_tool","tool":"<T3 MCP tool>","arguments":{...}}\`.
 
 ## Notes
-- Agents launched from here start in approval-required mode: they may stop and wait for the user to approve edits in T3 Code.
+- Agents launched from here run at the access the T3 token was approved for (full-access, or approval-required for a CLI-issued token). In approval-required mode they may stop and wait for the user to approve edits in T3 Code.
 - Write \`message\` as a complete, self-contained task: the agent does not see this conversation.
 - Errors: \`PROJECT_NOT_FOUND\` / \`PROJECT_AMBIGUOUS\` (the message lists candidates; ask the user), \`T3_UNREACHABLE\` (retryable: the Mac is asleep, offline or T3 Code is closed), \`T3_TOOL_ERROR\` (T3 refused; read the message).
 `;

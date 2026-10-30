@@ -410,6 +410,9 @@ export class PatternPredictorAdapter
 
   async microfrontendData() {
     const predictions = await this.listPredictions();
+    // Every action answers with the refreshed dashboard.
+    const then = <T extends unknown[]>(work: (...args: T) => Promise<unknown>) =>
+      async (...args: T) => { await work(...args); return this.microfrontendData(); };
     return {
       channel: this.channel,
       listening: this.listening,
@@ -417,26 +420,11 @@ export class PatternPredictorAdapter
       predictions,
       actions: {
         refresh: () => this.microfrontendData(),
-        analyze: async () => {
-          await this.analyze();
-          return this.microfrontendData();
-        },
-        ask: async (idOrKey: string) => {
-          await this.ask(idOrKey, { force: true });
-          return this.microfrontendData();
-        },
-        remove: async (idOrKey: string) => {
-          await this.removePrediction(idOrKey);
-          return this.microfrontendData();
-        },
-        dismiss: async (idOrKey: string) => {
-          await this.setStatus(idOrKey, "dismissed");
-          return this.microfrontendData();
-        },
-        resume: async (idOrKey: string) => {
-          await this.setStatus(idOrKey, "active");
-          return this.microfrontendData();
-        },
+        analyze: then(() => this.analyze()),
+        ask: then((idOrKey: string) => this.ask(idOrKey, { force: true })),
+        remove: then((idOrKey: string) => this.removePrediction(idOrKey)),
+        dismiss: then((idOrKey: string) => this.setStatus(idOrKey, "dismissed")),
+        resume: then((idOrKey: string) => this.setStatus(idOrKey, "active")),
       },
     };
   }
@@ -485,7 +473,7 @@ export class PatternPredictorAdapter
 
   /** Looks for one topic in the history and reports whether its timing qualifies, and why not. */
   async check(topic: string): Promise<PatternCheck> {
-    const messages = await this.userMessages(new Date(this.clock().getTime() - this.lookbackDays * 86_400_000));
+    const messages = await this.userMessages(this.lookbackStart(this.clock()));
     if (messages.length === 0) return { messages: 0, days: 0, slotDays: 0, weekdays: [], qualifies: false, examples: [] };
     const call = await this.system2.functionCall<{ messages: number[] }>(
       checkPrompt(topic, messages),
@@ -508,7 +496,7 @@ export class PatternPredictorAdapter
   /** Asks the model to group recent requests by intent, then keeps the groups whose times really recur. */
   async analyze(): Promise<Prediction[]> {
     const now = this.clock();
-    const messages = await this.userMessages(new Date(now.getTime() - this.lookbackDays * 86_400_000));
+    const messages = await this.userMessages(this.lookbackStart(now));
     if (messages.length < this.minDays) return this.listPredictions();
     const known = await this.listPredictions();
     const call = await this.system2.functionCall<PatternReport>(
@@ -539,13 +527,16 @@ export class PatternPredictorAdapter
     const today = localTime(now, this.timezone).day;
     if (!force && prediction.lastAskedAt && localTime(new Date(prediction.lastAskedAt), this.timezone).day === today) return false;
 
-    const ignoredCount = await this.ignoredCount(prediction);
+    const doneSince = new Date(now.getTime() - DONE_WINDOW_MS);
+    const askedAt = prediction.lastAskedAt ? new Date(prediction.lastAskedAt) : undefined;
+    const messages = await this.userMessages(askedAt && askedAt < doneSince ? askedAt : doneSince);
+    const ignoredCount = this.ignoredCount(prediction, messages);
     if (ignoredCount >= MAX_IGNORED) {
       await this.database.update<PredictionRow>(TABLE, prediction.id, { status: "muted", ignoredCount, updatedAt: now });
       this.destroyTask(prediction.id);
       return false;
     }
-    if (!force && await this.alreadyDone(prediction, now)) return false;
+    if (!force && await this.alreadyDone(prediction, messages.filter(({ createdAt }) => createdAt >= doneSince))) return false;
 
     await this.database.update<PredictionRow>(TABLE, prediction.id, { lastAskedAt: now, ignoredCount, updatedAt: now });
     await listener({
@@ -614,18 +605,16 @@ export class PatternPredictorAdapter
    * shortcut: any user message within 2h of the question counts as an answer,
    * upgrade to reading the reply if muting triggers on chatty nights.
    */
-  private async ignoredCount(prediction: Prediction): Promise<number> {
+  private ignoredCount(prediction: Prediction, messages: readonly ChatMessage[]): number {
     if (!prediction.lastAskedAt) return 0;
-    const askedAt = new Date(prediction.lastAskedAt);
-    const replies = await this.userMessages(askedAt);
-    return replies.some(({ createdAt }) => createdAt.getTime() - askedAt.getTime() <= REPLY_WINDOW_MS)
+    const askedAt = new Date(prediction.lastAskedAt).getTime();
+    return messages.some(({ createdAt }) => createdAt.getTime() >= askedAt && createdAt.getTime() - askedAt <= REPLY_WINDOW_MS)
       ? 0
       : prediction.ignoredCount + 1;
   }
 
   /** Skips the question when the user already asked for it in the last hours. */
-  private async alreadyDone(prediction: Prediction, now: Date): Promise<boolean> {
-    const recent = await this.userMessages(new Date(now.getTime() - DONE_WINDOW_MS));
+  private async alreadyDone(prediction: Prediction, recent: readonly ChatMessage[]): Promise<boolean> {
     if (recent.length === 0) return false;
     const answers = await this.system2.ask(
       { habit: prediction.description, recent: recent.map(({ text }) => text) },
@@ -706,6 +695,10 @@ export class PatternPredictorAdapter
         { name: prediction.id, timezone: prediction.timezone, noOverlap: true },
       ));
     }
+  }
+
+  private lookbackStart(now: Date): Date {
+    return new Date(now.getTime() - this.lookbackDays * 86_400_000);
   }
 
   private destroyTask(id: string): void {

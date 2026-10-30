@@ -1,7 +1,7 @@
 schemaVersion: 1
 id: action-t3code
 name: T3 Code
-version: 0.1.1
+version: 0.1.2
 description: Launch coding agents, manage projects and repos, and open projects in T3 Code on a Mac over Tailscale
 interfaces:
   - id: t3code.control

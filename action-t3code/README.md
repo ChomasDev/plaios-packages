@@ -18,3 +18,13 @@ Lets the PLAIOS agent drive T3 Code on your Mac over Tailscale: launch coding ag
    - Mac SSH for `open_project` (it runs `t3 app <path>` there): `host`, `user`, `privateKeyPath` as in `action-ssh` (or `SSH_*` env vars).
 
 Agents started with this token cannot go above `approval-required` mode: T3 asks you to approve edits.
+
+### Full access
+
+`t3 auth session issue` cannot raise that ceiling. For agents that run without approvals, get the token through T3's approval page instead, on the Mac:
+
+```sh
+node scripts/issue-token.mjs            # defaults to http://127.0.0.1:3773
+```
+
+Pick **full-access** on the page that opens; the script prints the token for `T3_MCP_TOKEN`. T3 limits these tokens to 30 days with no refresh, so run it again when it expires.

@@ -64,11 +64,7 @@ export class ClaudeCodeProvider implements System2 {
   }
 
   async processInput(input: AIInput, options: AIProcessOptions = {}): Promise<AIProcessResult> {
-    const stream = this.streamPlain(input, options);
-    if (options.stream) return { type: "stream", stream };
-    let text = "";
-    for await (const chunk of stream) text += chunk;
-    return { type: "text", text };
+    return toResult(this.streamPlain(input, options), options.stream);
   }
 
   ask(state: Record<string, unknown>, questions: SystemQuestions, options?: SystemAskOptions): Promise<SystemAnswers> {
@@ -89,11 +85,7 @@ export class ClaudeCodeProvider implements System2 {
   async processWithFunctions(input: AIInput, definitions: readonly AIExecutableFunctionDefinition[], options: AIFunctionProcessOptions = {}): Promise<AIProcessResult> {
     if (definitions.length === 0) return this.processInput(input, options);
     validateDefinitions(definitions);
-    const stream = this.runFunctionLoop(input, definitions, options);
-    if (options.stream) return { type: "stream", stream };
-    let text = "";
-    for await (const chunk of stream) text += chunk;
-    return { type: "text", text };
+    return toResult(this.runFunctionLoop(input, definitions, options), options.stream);
   }
 
   private async *streamPlain(input: AIInput, options: AIProcessOptions): AsyncGenerator<string> {
@@ -248,6 +240,13 @@ async function imageBlock(image: AIImageInput) {
   const mediaType = image.mediaType ?? IMAGE_TYPES[extname(path).toLowerCase()];
   if (!mediaType) throw new Error(`Unsupported image type: ${path}`);
   return { type: "image", source: { type: "base64", media_type: mediaType, data: (await readFile(path)).toString("base64") } };
+}
+
+async function toResult(stream: AsyncGenerator<string>, streaming: boolean | undefined): Promise<AIProcessResult> {
+  if (streaming) return { type: "stream", stream };
+  let text = "";
+  for await (const chunk of stream) text += chunk;
+  return { type: "text", text };
 }
 
 function textDelta(message: SDKMessage): string | undefined {

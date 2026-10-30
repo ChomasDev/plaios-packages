@@ -1,6 +1,6 @@
 {
   "name": "plaios",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "PLAIOS command line entrypoint",
   "keywords": ["plaios", "cli", "capabilities", "agents"],
   "private": false,

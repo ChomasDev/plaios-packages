@@ -1,6 +1,6 @@
 {
   "name": "@plaios/action-t3code",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Drive T3 Code on a Mac over Tailscale: launch coding agents, manage projects and repos, open a project in the desktop app",
   "keywords": [
     "plaios",
