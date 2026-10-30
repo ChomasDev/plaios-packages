@@ -1,0 +1,64 @@
+{
+  "name": "@plaios/claude-code",
+  "version": "0.1.0",
+  "description": "Claude Code AI provider and management surface for PLAIOS",
+  "keywords": [
+    "plaios",
+    "capability",
+    "system2",
+    "ai",
+    "claude",
+    "claude-code",
+    "anthropic"
+  ],
+  "private": false,
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "files": [
+    "dist",
+    "web",
+    "agent-os.package.yaml",
+    "README.md"
+  ],
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    },
+    "./web/ai": {
+      "types": "./dist/web/ai/index.d.ts",
+      "import": "./dist/web/ai/index.js"
+    },
+    "./web/styles.css": "./web/styles.css"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "pnpm build && node --test test/**/*.test.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@plaios/core": "workspace:*",
+    "@plaios/microfrontend": "workspace:*",
+    "@plaios/systems": "workspace:*",
+    "@anthropic-ai/claude-agent-sdk": "^0.3.314"
+  },
+  "peerDependencies": {
+    "react": ">=19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "@types/react": "^19.0.0",
+    "react": "19.2.4",
+    "typescript": "7.0.2"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

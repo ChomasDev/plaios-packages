@@ -1,0 +1,43 @@
+schemaVersion: 1
+id: claude-code
+name: Claude Code
+version: 0.1.0
+description: Claude as the PLAIOS model through the Claude Agent SDK, with your Claude Code login or an Anthropic API key, structured tool calling and no built-in tools
+interfaces:
+  - id: claude-code.ai
+    kind: system2
+    name: ClaudeCodeProvider
+    entry: .
+    export: .
+    className: ClaudeCodeProvider
+    description: Runs PLAIOS model requests through Claude Code
+    surfaces: [local, network]
+    permissions: [ai.claude-code]
+    required: []
+    config:
+      - key: model
+        env: CLAUDE_CODE_MODEL
+        type: string
+        required: false
+        default: claude-opus-5-5
+        description: Claude model id (for example claude-opus-5-5, claude-sonnet-5-5) or a Claude Code alias (opus, sonnet)
+      - key: apiKey
+        env: ANTHROPIC_API_KEY
+        type: secret
+        required: false
+        description: Optional Anthropic API key; otherwise the local Claude Code login (claude.ai subscription) is used
+      - key: effort
+        env: CLAUDE_CODE_EFFORT
+        type: string
+        required: false
+        description: Optional effort level (low, medium, high, xhigh, max)
+      - key: workingDirectory
+        type: string
+        required: false
+        description: Working directory for the Claude Code process
+    startup:
+      when: always
+    web:
+      entry: ./web/ai
+      export: default
+      styles: ./web/styles.css
