@@ -390,3 +390,30 @@ test("expands a remembered protocol and routes the action with Jev", async () =>
   assert.deepEqual(decision.capabilityIds, ["home-assistant.jev"]);
 });
 
+
+test("delivers a proactive run to its preferred output without an acknowledgement", async () => {
+  const orchestrator = new JevOrhcestatorOrchestrator({
+    system1: new JevSystem1({ apiKey: "test", fetch: mockFetch({
+      output: { type: "choice", choice: "web", probabilities: { web: 0.9, telegram: 0.1 }, confidence: 0.9 },
+      memory: { type: "noul", noul: 0.1 },
+    }) }),
+    capabilityDiscovery: { async discover() { return []; } },
+  });
+
+  const decision = await orchestrator.orchestrate(
+    {
+      id: "1",
+      channel: "cronjob",
+      text: "Ask whether to turn off the lights",
+      createdAt: new Date(),
+      metadata: { preferredOutputChannel: "telegram", proactive: true },
+    },
+    [
+      { channel: "web", async write() {} },
+      { channel: "telegram", async write() {} },
+    ],
+  );
+
+  assert.equal(decision.outputChannel, "telegram");
+  assert.deepEqual(decision.additionalOutputs, []);
+});

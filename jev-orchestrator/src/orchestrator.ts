@@ -59,7 +59,8 @@ export class JevOrhcestatorOrchestrator implements Orchestrator {
     outputs: readonly OutputInterface[],
     options: OrchestratorOptions = {},
   ): Promise<OrchestrationDecision> {
-    const fallback = outputs.find((output) => output.channel === message.channel) ?? outputs[0];
+    const preferred = outputs.find((output) => output.channel === message.metadata?.preferredOutputChannel);
+    const fallback = outputs.find((output) => output.channel === message.channel) ?? preferred ?? outputs[0];
     if (!fallback) throw new Error("JevOrhcestatorOrchestrator requires at least one output");
 
     const remembered = await this.rememberProtocol(message, fallback.channel);
@@ -92,11 +93,14 @@ export class JevOrhcestatorOrchestrator implements Orchestrator {
       );
 
       const outputAnswer = answers.output;
-      const outputChannel = preferRequestedOutput(
-        text,
-        outputs,
-        outputs.find((output) => output.channel === outputAnswer?.choice)?.channel ?? fallback.channel,
-      );
+      // A cron or prediction run already knows where the user wants it delivered.
+      const outputChannel = message.metadata?.proactive === true && preferred
+        ? preferred.channel
+        : preferRequestedOutput(
+          text,
+          outputs,
+          outputs.find((output) => output.channel === outputAnswer?.choice)?.channel ?? fallback.channel,
+        );
 
       const ranked = candidates
         .map((capability) => ({

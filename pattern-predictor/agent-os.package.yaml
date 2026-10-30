@@ -1,0 +1,73 @@
+schemaVersion: 1
+id: pattern-predictor
+name: Pattern Predictor
+version: 0.1.2
+description: Learns recurring requests from chat history and asks the user before the usual time
+interfaces:
+  - id: pattern-predictor.input
+    kind: input
+    name: PatternPredictorAdapter
+    entry: .
+    export: .
+    className: PatternPredictorAdapter
+    description: Finds time-of-day habits in chat history every night and proactively offers them; exposes predictions.manage
+    channel: pattern-predictor
+    surfaces: [local]
+    permissions: [memory.read, predictions.read, predictions.write]
+    required: [database, memory, system2]
+    config:
+      - key: outputChannel
+        env: PATTERN_OUTPUT_CHANNEL
+        type: string
+        required: true
+        description: Output channel that receives the proactive questions (for example telegram)
+      - key: userId
+        env: AGENT_OS_USER_ID
+        type: string
+        required: true
+        description: User whose chat history is analysed and who receives the questions
+      - key: timezone
+        env: PATTERN_TIMEZONE
+        type: string
+        required: false
+        default: Europe/Rome
+        description: IANA timezone used to read message times and schedule questions
+      - key: analysisCron
+        env: PATTERN_ANALYSIS_CRON
+        type: string
+        required: false
+        default: "0 4 * * *"
+        description: When the nightly pattern analysis runs (five-field cron)
+      - key: lookbackDays
+        env: PATTERN_LOOKBACK_DAYS
+        type: number
+        required: false
+        default: 21
+        description: Days of chat history analysed
+      - key: minDays
+        env: PATTERN_MIN_DAYS
+        type: number
+        required: false
+        default: 3
+        description: Different days a request must repeat on to become a prediction
+      - key: windowMinutes
+        env: PATTERN_WINDOW_MINUTES
+        type: number
+        required: false
+        default: 30
+        description: Allowed distance in minutes from the usual time
+      - key: leadMinutes
+        env: PATTERN_LEAD_MINUTES
+        type: number
+        required: false
+        default: 5
+        description: How many minutes before the usual time the question is sent
+    capability:
+      id: predictions.manage
+      version: 1.0.0
+      name: manage_predictions
+      description: List, dismiss, resume, promote, or re-analyse learned habit predictions.
+      permissions: [predictions.read, predictions.write]
+      tags: [prediction, habit, pattern, proactive, suggestion]
+    startup: { when: ifConfigured }
+    web: { entry: ./web/input, export: default, styles: ./web/styles.css }

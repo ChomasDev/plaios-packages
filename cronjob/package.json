@@ -1,6 +1,6 @@
 {
   "name": "@plaios/cronjob",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Persistent cron input and schedule-management capability for PLAIOS",
   "keywords": ["plaios", "capability", "input", "cron", "scheduler", "automation"],
   "private": false,

@@ -1,6 +1,6 @@
 {
   "name": "@plaios/voice-live",
-  "version": "0.1.2",
+  "version": "0.1.8",
   "description": "Live voice input: OpenAI Realtime (WebRTC) agent that speaks in real time and calls every PLAIOS capability as a tool",
   "keywords": ["plaios", "voice", "realtime", "openai", "input"],
   "private": false,

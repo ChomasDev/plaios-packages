@@ -11,6 +11,7 @@ import {
   CardTitle,
   ConfigurationEditor,
   InstanceSummary,
+  Label,
   MicrofrontendFrame,
   type MicrofrontendProps,
 } from "@plaios/microfrontend";
@@ -22,10 +23,16 @@ interface VoiceData {
   createSession?: () => Promise<{ clientSecret: string }>;
   callTool?: (name: string, args: unknown) => Promise<unknown>;
   remember?: (role: "user" | "assistant", text: string) => Promise<void>;
+  newChat?: () => Promise<void>;
 }
 
 type Status = "idle" | "connecting" | "live";
 interface Line { role: "user" | "assistant" | "tool"; text: string }
+
+// Devices belong to the browser you talk from, so the choice is kept there, not in the server config.
+const INPUT_KEY = "plaios.voice-live.input";
+const OUTPUT_KEY = "plaios.voice-live.output";
+const canPickOutput = typeof HTMLMediaElement !== "undefined" && "setSinkId" in HTMLMediaElement.prototype;
 
 // shortcut: tool output is cut at 20k chars, add summarization if a capability returns more
 const MAX_TOOL_OUTPUT = 20_000;
@@ -39,6 +46,32 @@ export default function VoiceLiveMicrofrontend({ component, data, onSaveConfig }
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const callRef = useRef<{ pc: RTCPeerConnection; mic: MediaStream; audio: AudioContext; frame: number }>(null);
   const levelsRef = useRef({ user: 0, assistant: 0 });
+  const playerRef = useRef<HTMLAudioElement>(null);
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [inputId, setInputId] = useStoredChoice(INPUT_KEY);
+  const [outputId, setOutputId] = useStoredChoice(OUTPUT_KEY);
+
+  const refreshDevices = () => void navigator.mediaDevices?.enumerateDevices().then(setDevices).catch(() => undefined);
+  useEffect(() => {
+    refreshDevices();
+    navigator.mediaDevices?.addEventListener("devicechange", refreshDevices);
+    return () => navigator.mediaDevices?.removeEventListener("devicechange", refreshDevices);
+  }, []);
+  // Browsers hide device names and ids until the page may use the microphone.
+  const hidden = devices.some((device) => device.kind === "audioinput" && !device.label);
+  const unlockDevices = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+      refreshDevices();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    }
+  };
+  // The speaker can change mid-call; the microphone is picked when the call starts.
+  useEffect(() => {
+    if (canPickOutput && playerRef.current) void playerRef.current.setSinkId(outputId).catch((caught: unknown) => setError(`Speaker: ${String(caught)}`));
+  }, [outputId]);
 
   const push = (line: Line) => {
     setLines((previous) => [...previous.slice(-49), line]);
@@ -53,8 +86,16 @@ export default function VoiceLiveMicrofrontend({ component, data, onSaveConfig }
     call.mic.getTracks().forEach((track) => track.stop());
     void call.audio.close();
     callRef.current = null;
+    playerRef.current = null;
     levelsRef.current = { user: 0, assistant: 0 };
     setStatus("idle");
+  };
+
+  const newChat = async () => {
+    stop();
+    setLines([]);
+    setError(undefined);
+    await dataRef.current?.newChat?.().catch((caught: unknown) => setError(caught instanceof Error ? caught.message : String(caught)));
   };
 
   const start = async () => {
@@ -69,13 +110,17 @@ export default function VoiceLiveMicrofrontend({ component, data, onSaveConfig }
       const pc = new RTCPeerConnection();
       const player = new Audio();
       player.autoplay = true;
+      playerRef.current = player;
+      if (canPickOutput && outputId) await player.setSinkId(outputId).catch(() => setOutputId(""));
       pc.ontrack = (event) => {
         const [stream] = event.streams;
         if (!stream) return;
         player.srcObject = stream;
         meter(audio, stream, (level) => { levelsRef.current.assistant = level; });
       };
-      const mic = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // `ideal`, not `exact`: an unplugged device falls back to the default microphone.
+      const mic = await navigator.mediaDevices.getUserMedia({ audio: inputId ? { deviceId: inputId } : true });
+      refreshDevices(); // device names are only visible after microphone permission
       pc.addTrack(mic.getTracks()[0]!, mic);
       meter(audio, mic, (level) => { levelsRef.current.user = level; });
 
@@ -144,7 +189,7 @@ export default function VoiceLiveMicrofrontend({ component, data, onSaveConfig }
           <Card>
             <CardHeader>
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <div><CardTitle>Voice session</CardTitle><CardDescription>{data?.model ?? "gpt-realtime"} · voice {data?.voice ?? "marin"}</CardDescription></div>
+                <div><CardTitle>Voice session</CardTitle><CardDescription>{data?.model} · voice {data?.voice ?? "marin"}</CardDescription></div>
                 <Badge variant={status === "live" ? "default" : "secondary"}>{status}</Badge>
               </div>
             </CardHeader>
@@ -153,12 +198,25 @@ export default function VoiceLiveMicrofrontend({ component, data, onSaveConfig }
               {status === "live"
                 ? <Button variant="outline" onClick={stop}>End conversation</Button>
                 : <Button onClick={() => void start()} disabled={status === "connecting" || data?.configured === false}>{status === "connecting" ? "Connecting…" : "Start talking"}</Button>}
+              <div className="grid w-full max-w-md gap-3 sm:grid-cols-2">
+                <DevicePicker label="Microphone" kind="audioinput" devices={devices} value={inputId} onChange={setInputId} disabled={status !== "idle"} />
+                {canPickOutput ? <DevicePicker label="Speaker" kind="audiooutput" devices={devices} value={outputId} onChange={setOutputId} /> : null}
+              </div>
+              {typeof navigator !== "undefined" && !navigator.mediaDevices
+                ? <p className="text-xs text-muted-foreground">Choosing devices needs HTTPS or http://localhost.</p>
+                : hidden && status === "idle" && <Button variant="outline" size="sm" onClick={() => void unlockDevices()}>Allow microphone to list devices</Button>}
+              {status === "live" && <p className="text-xs text-muted-foreground">End the conversation to switch microphone; the speaker switches right away.</p>}
               {data?.configured === false && <p className="text-xs text-muted-foreground">Set OPENAI_API_KEY to enable the voice session.</p>}
               {error && <p className="text-xs text-destructive">{error}</p>}
             </CardContent>
           </Card>
           <Card>
-            <CardHeader><CardTitle>Transcript</CardTitle><CardDescription>What was said and which tools ran.</CardDescription></CardHeader>
+            <CardHeader>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div><CardTitle>Transcript</CardTitle><CardDescription>What was said and which tools ran.</CardDescription></div>
+                <Button variant="outline" size="sm" onClick={() => void newChat()} disabled={status === "connecting" || (lines.length === 0 && status === "idle")}>New chat</Button>
+              </div>
+            </CardHeader>
             <CardContent className="space-y-2">
               {lines.length === 0 && <p className="text-xs text-muted-foreground">Nothing yet.</p>}
               {lines.map((line, index) => (
@@ -176,6 +234,36 @@ export default function VoiceLiveMicrofrontend({ component, data, onSaveConfig }
       </div>
     </MicrofrontendFrame>
   );
+}
+
+function DevicePicker({ label, kind, devices, value, onChange, disabled }: {
+  label: string;
+  kind: MediaDeviceKind;
+  devices: readonly MediaDeviceInfo[];
+  value: string;
+  onChange: (deviceId: string) => void;
+  disabled?: boolean;
+}) {
+  // Chrome also lists "default" and "communications" aliases; "System default" covers them.
+  const options = devices.filter((device) => device.kind === kind && !["default", "communications", ""].includes(device.deviceId));
+  const id = `voice-live-${kind}`;
+  return (
+    <div className="grid gap-1.5">
+      <Label htmlFor={id} className="text-xs text-muted-foreground">{label}</Label>
+      <select id={id} className="h-9 rounded-md border bg-background px-2 text-sm" value={options.some((device) => device.deviceId === value) ? value : ""} disabled={disabled} onChange={(event) => onChange(event.target.value)}>
+        <option value="">System default</option>
+        {options.map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `${label} ${index + 1}`}</option>)}
+      </select>
+    </div>
+  );
+}
+
+function useStoredChoice(key: string): [string, (value: string) => void] {
+  const [value, setValue] = useState(() => (typeof localStorage === "undefined" ? "" : localStorage.getItem(key) ?? ""));
+  return [value, (next) => {
+    localStorage.setItem(key, next);
+    setValue(next);
+  }];
 }
 
 /** Feeds a smoothed 0..1 loudness level from a stream into `onLevel` every animation frame. */

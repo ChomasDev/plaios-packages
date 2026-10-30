@@ -542,6 +542,7 @@ export class CronjobAdapter
       createdAt: triggeredAt,
       metadata: {
         preferredOutputChannel: job.preferredOutputChannel,
+        proactive: true,
         cronjob: {
           id: job.id,
           name: job.name,

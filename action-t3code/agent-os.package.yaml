@@ -1,0 +1,62 @@
+schemaVersion: 1
+id: action-t3code
+name: T3 Code
+version: 0.1.1
+description: Launch coding agents, manage projects and repos, and open projects in T3 Code on a Mac over Tailscale
+interfaces:
+  - id: t3code.control
+    kind: action
+    name: T3CodeCapability
+    entry: .
+    export: .
+    className: T3CodeCapability
+    description: Talks to the T3 Code MCP server on the Mac; opens projects in the desktop app through the paired SSH Mac
+    surfaces: [network, desktop]
+    permissions: [network.http, network.ssh, remote.control, code.agents]
+    required: [env]
+    config:
+      - key: url
+        env: T3_MCP_URL
+        type: string
+        required: true
+        description: T3 Code MCP endpoint, for example https://macbook.tailnet.ts.net/mcp
+      - key: token
+        env: T3_MCP_TOKEN
+        type: secret
+        required: true
+        description: "Bearer token from: t3 auth session issue --subject mcp-client --scope orchestration:read --scope orchestration:operate --ttl 365d --label plaios --token-only"
+      - key: macDevice
+        env: T3_SSH_DEVICE
+        type: string
+        required: false
+        description: SSH device id or name used by open_project when several are configured
+      - key: host
+        env: SSH_HOST
+        type: string
+        required: false
+        description: Mac hostname or Tailscale IP for open_project (same as action-ssh)
+      - key: user
+        env: SSH_USER
+        type: string
+        required: false
+        description: Mac SSH username
+      - key: privateKeyPath
+        env: SSH_PRIVATE_KEY_PATH
+        type: string
+        required: false
+        description: Private key the server uses to reach the Mac
+      - key: devices
+        env: SSH_DEVICES
+        type: string
+        required: false
+        description: JSON array of action-ssh devices, instead of host/user
+    capability:
+      id: t3code.control
+      version: 1.0.0
+      name: control_t3_code
+      description: Launch coding agents and manage projects in T3 Code on the user's Mac
+      permissions: [network.http, network.ssh, remote.control, code.agents]
+      tags: [t3, t3code, code, coding, agent, repo, repository, project, progetto, apri, open, mac, git, clone]
+      execution: { timeoutMs: 60000, idempotent: false }
+    startup: { when: ifConfigured }
+    web: { entry: ./web/action, export: default, styles: ./web/styles.css }

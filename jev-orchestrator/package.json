@@ -1,6 +1,6 @@
 {
   "name": "@plaios/jev-orchestrator",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "TypeSafe Jev orchestrator that can send natural-language commands directly to capabilities",
   "keywords": ["plaios", "capability", "orchestrator", "jev", "typesafe"],
   "private": false,

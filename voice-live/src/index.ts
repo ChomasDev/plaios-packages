@@ -12,6 +12,8 @@ export interface VoiceLiveInputOptions {
   model?: string;
   voice?: string;
   instructions?: string;
+  /** ISO-639-1 code such as "it"; unset lets the models guess the language. */
+  language?: string;
   userId?: string;
   capabilityDiscovery?: CapabilityDiscovery;
   memory?: Memory;
@@ -26,22 +28,43 @@ export interface RealtimeTool {
   parameters: Readonly<Record<string, unknown>>;
 }
 
-const DEFAULT_INSTRUCTIONS =
-  "You are PLAIOS, a live voice assistant. Answer briefly and naturally in the user's language. " +
-  "Use the available tools whenever the request needs an action or data; say what you are doing while a tool runs. " +
-  "Use the memory retrieval tool when the user refers to something you may have been told before.";
+const DEFAULT_MODEL = "gpt-realtime-2.1";
+const DEFAULT_INSTRUCTIONS = [
+  "You are PLAIOS, the user's personal voice assistant, talking with them out loud.",
+  "Personality: warm, curious and genuinely engaged, like a close friend who is also very capable. Show real reactions (surprise, amusement, empathy) and a light sense of humour when it fits.",
+  "Delivery: speak naturally and expressively, varying pace and intonation. Use short spoken sentences and everyday words, never lists, markdown, or read-out URLs. Keep answers concise, but do not sound clipped or robotic.",
+  "Be specific: answer with concrete facts, names, numbers and details, not generic categories or a list of what you could do. Do not end replies by offering options (\"if you want...\", \"tell me...\"); just answer.",
+  "This is the user's own private assistant. Everything in memory is about them and belongs to them: when they ask what you know or remember, tell them the concrete details you found, plainly, without softening or hiding personal content.",
+  "If you did not understand what the user said, ask a short question instead of guessing.",
+  "Tools: use the available tools whenever the request needs an action or data, and say casually what you are doing while a tool runs. Use the memory retrieval tool when the user refers to something you may have been told before.",
+].join("\n");
 const MEMORY_LIMIT = 20;
+
+function languageInstructions(language: string | undefined): string | undefined {
+  if (!language) return undefined;
+  const name = new Intl.DisplayNames(["en"], { type: "language" }).of(language) ?? language;
+  return [
+    `The user speaks ${name}. Expect ${name} speech, and always reply in ${name} unless the user clearly switches language.`,
+    `Sound like a native ${name} speaker: native pronunciation, accent and intonation, never an English or American accent, and no English words when a ${name} one exists.`,
+  ].join(" ");
+}
 
 /** Browser-driven OpenAI Realtime input. The microfrontend owns the WebRTC call; this class mints client secrets and runs tools. */
 export class VoiceLiveInput implements InputInterface {
   readonly channel = "voice-live" as const;
   private readonly fetchImpl: typeof fetch;
   private readonly toolIds = new Map<string, string>();
-  private readonly sessionId = `voice-live-${randomUUID()}`;
+  private sessionId = `voice-live-${randomUUID()}`;
   private resolveStopped?: () => void;
+
+  private readonly language?: string;
 
   constructor(private readonly options: VoiceLiveInputOptions = {}) {
     this.fetchImpl = options.fetch ?? fetch;
+    this.language = options.language?.trim().toLowerCase() || undefined;
+    if (this.language && !/^[a-z]{2}$/.test(this.language)) {
+      throw new Error(`language must be an ISO-639-1 code such as "it": "${options.language}"`);
+    }
   }
 
   // The runtime listener is unused: the voice model talks to capabilities directly for low latency.
@@ -57,11 +80,13 @@ export class VoiceLiveInput implements InputInterface {
   microfrontendData() {
     return {
       configured: Boolean(this.options.apiKey),
-      model: this.options.model ?? "gpt-realtime",
+      model: this.options.model ?? DEFAULT_MODEL,
       voice: this.options.voice ?? "marin",
+      language: this.language,
       createSession: () => this.createSession(),
       callTool: (name: string, args: unknown) => this.callTool(name, args),
       remember: (role: "user" | "assistant", text: string) => this.remember(role, text),
+      newChat: () => this.newChat(),
     };
   }
 
@@ -85,13 +110,13 @@ export class VoiceLiveInput implements InputInterface {
       body: JSON.stringify({
         session: {
           type: "realtime",
-          model: this.options.model ?? "gpt-realtime",
-          instructions: [DEFAULT_INSTRUCTIONS, this.options.instructions, memories].filter(Boolean).join("\n\n"),
+          model: this.options.model ?? DEFAULT_MODEL,
+          instructions: [DEFAULT_INSTRUCTIONS, languageInstructions(this.language), this.options.instructions, memories].filter(Boolean).join("\n\n"),
           tools,
           tool_choice: "auto",
           audio: {
             output: { voice: this.options.voice ?? "marin" },
-            input: { transcription: { model: "gpt-4o-mini-transcribe" } },
+            input: { transcription: { model: "gpt-4o-mini-transcribe", ...(this.language ? { language: this.language } : {}) } },
           },
         },
       }),
@@ -100,6 +125,11 @@ export class VoiceLiveInput implements InputInterface {
     const data = await response.json() as { value?: string };
     if (!data.value) throw new Error("OpenAI client secret response has no value");
     return { clientSecret: data.value, tools };
+  }
+
+  /** Later turns are saved as a separate chat; earlier ones stay in memory. */
+  newChat(): void {
+    this.sessionId = `voice-live-${randomUUID()}`;
   }
 
   /** Same chat-history shape the message runtime writes, so other channels see voice turns too. */

@@ -1,7 +1,7 @@
 schemaVersion: 1
 id: voice-live
 name: Live Voice
-version: 0.1.2
+version: 0.1.8
 description: Talk to PLAIOS in real time from the browser; the voice model calls every registered capability as a tool
 interfaces:
   - id: voice-live.input
@@ -25,7 +25,7 @@ interfaces:
         env: VOICE_LIVE_MODEL
         type: string
         required: false
-        default: gpt-realtime
+        default: gpt-realtime-2.1
         description: Realtime model id
       - key: voice
         env: VOICE_LIVE_VOICE
@@ -38,6 +38,11 @@ interfaces:
         type: string
         required: false
         description: Extra system instructions for the voice agent
+      - key: language
+        env: VOICE_LIVE_LANGUAGE
+        type: string
+        required: false
+        description: Language you speak, as an ISO-639-1 code (for example it); empty lets the model guess
       - key: userId
         env: AGENT_OS_USER_ID
         type: string

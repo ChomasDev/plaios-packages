@@ -1,7 +1,7 @@
 schemaVersion: 1
 id: cronjob
 name: Cron Scheduler
-version: 0.2.0
+version: 0.2.1
 description: Persistent scheduled prompts with a live input and an agent-manageable capability
 interfaces:
   - id: cronjob.input

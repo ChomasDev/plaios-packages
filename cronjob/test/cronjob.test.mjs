@@ -45,6 +45,7 @@ test("the live input and management capability share one scheduler", async () =>
   assert.equal(messages.length, 1);
   assert.equal(messages[0].metadata.preferredOutputChannel, "telegram");
   assert.equal(messages[0].userId, "thomas");
+  assert.equal(messages[0].metadata.proactive, true);
 
   await adapter.stop();
   await listening;
