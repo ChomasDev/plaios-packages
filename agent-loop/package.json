@@ -1,6 +1,6 @@
 {
   "name": "@plaios/agent-loop",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Default model and capability execution loop for PLAIOS",
   "keywords": ["plaios", "agent", "loop", "capabilities"],
   "private": false,

@@ -93,6 +93,8 @@ export class ClaudeCodeProvider implements System2 {
     try {
       let streamed = false;
       for await (const message of session.turn(await userContent(input))) {
+        const thought = thinkingDelta(message);
+        if (thought) options.onReasoning?.(thought);
         if (message.type === "result") { if (!streamed && message.subtype === "success") yield message.result; return; }
         const delta = textDelta(message);
         if (delta) { streamed = true; yield delta; }
@@ -115,6 +117,8 @@ export class ClaudeCodeProvider implements System2 {
         let result: SDKResultMessage | undefined;
         for await (const item of session.turn(content)) {
           if (item.type === "result") { result = item; break; }
+          const thought = thinkingDelta(item);
+          if (thought) { options.onReasoning?.(thought); continue; }
           const partial = structuredDelta(item);
           if (partial === undefined) continue;
           json += partial;
@@ -247,6 +251,12 @@ async function toResult(stream: AsyncGenerator<string>, streaming: boolean | und
   let text = "";
   for await (const chunk of stream) text += chunk;
   return { type: "text", text };
+}
+
+function thinkingDelta(message: SDKMessage): string | undefined {
+  if (message.type !== "stream_event" || message.parent_tool_use_id !== null) return undefined;
+  const event = message.event;
+  return event.type === "content_block_delta" && event.delta.type === "thinking_delta" ? event.delta.thinking : undefined;
 }
 
 function textDelta(message: SDKMessage): string | undefined {

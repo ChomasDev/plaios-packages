@@ -24,3 +24,21 @@ test("streams the final answer in deltas while the step JSON arrives", async () 
   for await (const delta of result.stream) deltas.push(delta);
   assert.deepEqual(deltas, ["Hello worl", "d"]);
 });
+
+test("reports reasoning items as deltas without repeating text", async () => {
+  const step = '{"type":"text","name":"","arguments":null,"text":"ok","finishOnSuccess":false}';
+  const thread = {
+    run: async () => ({ finalResponse: step }),
+    runStreamed: async () => ({ events: (async function* () {
+      yield { type: "item.updated", item: { id: "r1", type: "reasoning", text: "Check" } };
+      yield { type: "item.completed", item: { id: "r1", type: "reasoning", text: "Check the files" } };
+      yield { type: "item.updated", item: { type: "agent_message", text: step } };
+    })() }),
+  };
+  const provider = new CodexProvider({ model: "test" });
+  provider.codex = { startThread: () => thread };
+  const thoughts = [];
+  const result = await provider.processWithFunctions("hi", [{ name: "noop", description: "", inputSchema: { type: "object", properties: {} }, execute: async () => ({}) }], { stream: true, onReasoning: (delta) => thoughts.push(delta) });
+  for await (const _ of result.stream) { /* drain */ }
+  assert.deepEqual(thoughts, ["Check", " the files"]);
+});

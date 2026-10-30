@@ -1,8 +1,8 @@
 schemaVersion: 1
 id: action-cli
 name: CLI Inspector
-version: 0.2.0
-description: Shell-free, allowlisted inspection commands with workspace and secret boundaries
+version: 0.3.0
+description: Runs commands on the server in full, read-only or allowlist mode, never forwarding secrets
 interfaces:
   - id: action-cli.action
     kind: action
@@ -10,20 +10,25 @@ interfaces:
     entry: .
     export: .
     className: RunCLICommandCapability
-    description: Runs an allowlisted local inspection command without invoking a shell or forwarding secrets
+    description: Runs a command on the server (full, read-only or allowlist mode) without forwarding secrets
     surfaces: [cli, local, filesystem]
     permissions: [cli.execute, filesystem.read]
     required: [env]
     config:
+      - key: mode
+        type: string
+        required: false
+        default: full
+        description: "full runs any command; read-only runs inspection tools on any path; allowlist runs only allowedCommands inside the workspace"
       - key: allowedCommands
         type: string
         required: false
         default: echo,pwd,ls,whoami,date,find,stat,df,du,free,uname,ps,which,whereis,dpkg-query
-        description: Comma-separated executable allowlist
+        description: Comma-separated executables, used only in allowlist mode
       - key: timeoutMs
         type: number
         required: false
-        default: 5000
+        default: 30000
         description: Per-command timeout
       - key: maxOutputBytes
         type: number
@@ -34,9 +39,9 @@ interfaces:
       id: cli.run-command
       version: 1.0.0
       name: run_cli_command
-      description: Run one allowlisted executable on the PLAIOS server, without a shell; only configured executables are allowed.
+      description: Runs a command on the PLAIOS server; what is accepted depends on the mode.
       permissions: [cli.execute, filesystem.read]
       tags: [cli, command, local, filesystem, packages, processes]
-      execution: { timeoutMs: 5000, idempotent: true }
+      execution: { timeoutMs: 30000, idempotent: false }
     startup: { when: always }
     web: { entry: ./web/action, export: default, styles: ./web/styles.css }

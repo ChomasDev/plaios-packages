@@ -15,6 +15,7 @@ export interface PersistentThreadOptions {
 
 interface PersistentRunOptions {
   onDelta?: (delta: string) => void;
+  onReasoning?: (delta: string) => void;
   outputSchema?: unknown;
   signal?: AbortSignal;
 }
@@ -64,7 +65,7 @@ export class PersistentCodexAppServer {
   async runTurn(threadOptions: PersistentThreadOptions, existingThreadId: string | null, input: CodexInput, options: PersistentRunOptions): Promise<{ threadId: string; result: PersistentRunResult }> {
     await this.ensureStarted();
     const threadId = existingThreadId ?? await this.createThread(threadOptions);
-    const completion = this.waitForTurn(threadId, options.signal, options.onDelta);
+    const completion = this.waitForTurn(threadId, options.signal, options.onDelta, options.onReasoning);
     try {
       const response = asRecord(await this.request("turn/start", {
         threadId,
@@ -103,6 +104,8 @@ export class PersistentCodexAppServer {
     const config: Record<string, unknown> = {
       web_search: options.webSearchMode,
       sandbox_workspace_write: { network_access: options.networkAccessEnabled },
+      // Summaries are what the chat shows as the model's thinking.
+      model_reasoning_summary: "auto",
     };
     const response = asRecord(await this.request("thread/start", {
       model: options.model,
@@ -115,7 +118,7 @@ export class PersistentCodexAppServer {
     return requireString(asRecord(response.thread).id, "Codex app-server thread id");
   }
 
-  private waitForTurn(threadId: string, signal?: AbortSignal, onDelta?: (delta: string) => void): { result: Promise<string>; setTurnId(value: string): void; cancel(): void } {
+  private waitForTurn(threadId: string, signal?: AbortSignal, onDelta?: (delta: string) => void, onReasoning?: (delta: string) => void): { result: Promise<string>; setTurnId(value: string): void; cancel(): void } {
     let turnId: string | undefined;
     let finalResponse = "";
     let settled = false;
@@ -144,6 +147,14 @@ export class PersistentCodexAppServer {
       if (turnId && typeof params.turnId === "string" && params.turnId !== turnId) return;
       if (message.method === "item/agentMessage/delta") {
         if (typeof params.delta === "string") onDelta?.(params.delta);
+        return;
+      }
+      if (message.method === "item/reasoning/summaryTextDelta" || message.method === "item/reasoning/textDelta") {
+        if (typeof params.delta === "string") onReasoning?.(params.delta);
+        return;
+      }
+      if (message.method === "item/reasoning/summaryPartAdded") {
+        onReasoning?.("\n\n");
         return;
       }
       if (message.method === "item/completed") {

@@ -71,7 +71,7 @@ export class CodexProvider implements System2 {
   async processInput(input: AIInput, options: AIProcessOptions = {}): Promise<AIProcessResult> {
     const prompt = createCodexInput(input, options.instructions);
     const thread = this.startThread();
-    if (options.stream) return { type: "stream", stream: streamText(thread, prompt, resolveSignal(this.settings, options)) };
+    if (options.stream) return { type: "stream", stream: streamText(thread, prompt, resolveSignal(this.settings, options), options.onReasoning) };
     const result = await thread.run(prompt, { signal: resolveSignal(this.settings, options) });
     return { type: "text", text: result.finalResponse };
   }
@@ -112,7 +112,7 @@ export class CodexProvider implements System2 {
       // Stream the final answer's `text` field while the step JSON is still arriving; tool-call steps stay buffered.
       let finalResponse = "";
       let sent = 0;
-      for await (const text of agentMessages(thread, prompt, { outputSchema: schema, signal: resolveSignal(this.settings, options) })) {
+      for await (const text of agentMessages(thread, prompt, { outputSchema: schema, signal: resolveSignal(this.settings, options), onReasoning: options.onReasoning })) {
         finalResponse = text;
         const decoded = partialFinalText(text);
         if (decoded !== undefined && decoded.length > sent) { yield decoded.slice(sent); sent = decoded.length; }
@@ -193,8 +193,8 @@ function validateDefinition(definition: AIFunctionDefinition): void { if (!/^[a-
 function parseJson<T>(value: string, label: string): T { try { return JSON.parse(value) as T; } catch (error) { throw new Error(`Codex returned invalid JSON for ${label}`, { cause: error }); } }
 function serialize(value: unknown): string { try { return JSON.stringify(value, null, 2) ?? String(value); } catch { return String(value); } }
 function resolveSignal(defaults: Readonly<AIModelSettings>, options: Pick<AIProcessOptions, "settings" | "signal">): AbortSignal | undefined { const timeoutMs = options.settings?.timeoutMs ?? defaults.timeoutMs; const timeoutSignal = timeoutMs === undefined ? undefined : AbortSignal.timeout(Math.max(1, timeoutMs)); if (options.signal && timeoutSignal) return AbortSignal.any([options.signal, timeoutSignal]); return options.signal ?? timeoutSignal; }
-interface RunOptions { outputSchema?: unknown; signal?: AbortSignal }
-interface ThreadEvent { type: string; item?: { type: string; text?: string }; error?: { message: string }; message?: string }
+interface RunOptions { outputSchema?: unknown; signal?: AbortSignal; onReasoning?: (delta: string) => void }
+interface ThreadEvent { type: string; item?: { id?: string; type: string; text?: string }; error?: { message: string }; message?: string }
 interface RunnableThread {
   run(input: CodexInput, options?: RunOptions): Promise<{ finalResponse: string }>;
   runStreamed?(input: CodexInput, options?: RunOptions): Promise<{ events: AsyncIterable<ThreadEvent> }>;
@@ -204,9 +204,17 @@ interface RunnableThread {
 async function* agentMessages(thread: RunnableThread, input: CodexInput, options: RunOptions): AsyncGenerator<string> {
   if (!thread.runStreamed) { yield (await thread.run(input, options)).finalResponse; return; }
   let last = "";
+  // The SDK repeats a reasoning item's whole text on each update; only the new part is reported.
+  const reasoned = new Map<string, number>();
   for await (const event of (await thread.runStreamed(input, options)).events) {
     if (event.type === "turn.failed") throw new Error(event.error?.message ?? "Codex turn failed");
     if (event.type === "error") throw new Error(event.message ?? "Codex stream error");
+    if ((event.type === "item.updated" || event.type === "item.completed") && event.item?.type === "reasoning" && typeof event.item.text === "string") {
+      const key = event.item.id ?? "reasoning";
+      const seen = reasoned.get(key) ?? 0;
+      if (event.item.text.length > seen) { options.onReasoning?.(event.item.text.slice(seen)); reasoned.set(key, event.item.text.length); }
+      continue;
+    }
     if ((event.type === "item.updated" || event.type === "item.completed") && event.item?.type === "agent_message" && typeof event.item.text === "string") {
       last = event.item.text;
       yield last;
@@ -214,9 +222,9 @@ async function* agentMessages(thread: RunnableThread, input: CodexInput, options
   }
 }
 
-async function* streamText(thread: RunnableThread, input: CodexInput, signal?: AbortSignal): AsyncGenerator<string> {
+async function* streamText(thread: RunnableThread, input: CodexInput, signal?: AbortSignal, onReasoning?: (delta: string) => void): AsyncGenerator<string> {
   let sent = 0;
-  for await (const text of agentMessages(thread, input, { signal })) { if (text.length > sent) { yield text.slice(sent); sent = text.length; } }
+  for await (const text of agentMessages(thread, input, { signal, onReasoning })) { if (text.length > sent) { yield text.slice(sent); sent = text.length; } }
 }
 
 /** Decodes the `text` of an incomplete `{"type":"text", ...}` step so it can stream; undefined until the step is known to be text. */

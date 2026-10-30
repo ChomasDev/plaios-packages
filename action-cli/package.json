@@ -1,6 +1,6 @@
 {
   "name": "@plaios/action-cli",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Allowlisted, shell-free CLI inspection capability for PLAIOS",
   "keywords": ["plaios", "capability", "action", "cli", "inspection"],
   "private": false,

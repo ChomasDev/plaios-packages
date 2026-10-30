@@ -1,6 +1,6 @@
 {
   "name": "@plaios/codex",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Codex AI provider and management surface for PLAIOS",
   "keywords": ["plaios", "capability", "system2", "ai", "codex", "openai"],
   "private": false,

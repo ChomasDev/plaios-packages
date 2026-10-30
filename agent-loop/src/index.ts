@@ -27,6 +27,10 @@ const defaultInstructions = [
   "For local filesystem or runtime questions, call the relevant capability instead of asking the user to run a command.",
   "Before using a capability you are unsure about, or after one fails, call read_capability_docs with its id to read how it works.",
   "If the initial memory context is incomplete, call memory_retrieval with focused follow-up queries; call it more than once when different angles are needed.",
+  "When the user refers to another chat or to something said before that is not in this conversation, call read_conversations to list, search or read past conversations on any channel.",
+  "For a task with three or more steps, call update_plan first with the whole checklist, then again each time a step starts or finishes, always passing the full list; skip it for quick requests.",
+  "When work splits into independent parts (researching several topics, checking several systems, a long job with separable pieces), call run_subagents to run them in parallel, giving each task complete, self-contained instructions; then combine their reports. Do the work yourself when the parts depend on each other.",
+  "Keep going until the whole task is done; do not stop halfway to ask for permission to continue.",
   "After receiving capability results, provide a concise final answer.",
 ].join(" ");
 
@@ -95,6 +99,7 @@ export class DefaultAgentLoop implements AgentLoop {
         stream: options.stream,
         signal: options.signal,
         instructions: this.instructionsFor(message),
+        onReasoning: reasoningReporter(runId, options),
       });
     }
 
@@ -166,6 +171,7 @@ export class DefaultAgentLoop implements AgentLoop {
       signal: options.signal,
       instructions: this.instructionsFor(message),
       maxSteps: this.maxSteps,
+      onReasoning: reasoningReporter(runId, options),
     });
   }
 
@@ -364,6 +370,12 @@ function toModelInput(message: InputMessage): AIInput {
     .filter((attachment) => attachment.type === "image")
     .map(({ path, mediaType }) => ({ path, mediaType }));
   return images.length > 0 ? { text: message.text, images } : message.text;
+}
+
+/** Forwards the model's reasoning as loop events; nothing is attached when nobody listens. */
+function reasoningReporter(runId: string, options: AgentLoopOptions): ((delta: string) => void) | undefined {
+  if (!options.onEvent) return undefined;
+  return (delta) => void emit(options, { type: "model.reasoning", runId, at: new Date(), delta });
 }
 
 async function emit(

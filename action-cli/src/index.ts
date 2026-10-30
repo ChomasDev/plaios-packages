@@ -18,7 +18,11 @@ export interface RunCLICommandOutput {
   stderr: string;
 }
 
+/** `full` runs anything, `read-only` runs inspection tools on any path, `allowlist` runs only `allowedCommands` inside the workspace. */
+export type CLIMode = "full" | "read-only" | "allowlist";
+
 export interface RunCLICommandCapabilityOptions {
+  mode?: CLIMode | string;
   allowedCommands?: readonly string[] | string;
   cwd?: string;
   env: Environment;
@@ -26,26 +30,32 @@ export interface RunCLICommandCapabilityOptions {
   maxOutputBytes?: number;
 }
 
-const DOCS = `# run_cli_command
-
-Runs one executable on the PLAIOS server, without a shell, from the PLAIOS workspace. Only executables in the configured allowlist are accepted (the \`command\` description lists them); by default these are read-only inspection tools (ls, find, stat, df, du, free, uname, ps, which, dpkg-query, ...). \`ssh\` and other tools work only if the operator added them to the allowlist.
-
-## When to use
-- Inspecting the server itself: files in the workspace, disk, memory, OS, processes, installed packages, date, user.
-- Not for Macs or other paired computers (use \`control_remote_computer\` / \`control_remote_computer_jev\`), not for Home Assistant.
-
+const COMMON_DOCS = `
 ## Inputs
-No shell: no pipes, redirects, globs, \`&&\` or env expansion. One executable, arguments as separate strings.
+No shell unless you start one: one executable, arguments as separate strings.
 - \`{"command": "df", "args": ["-h"]}\`
-- \`{"command": "find", "args": [".", "-name", "config.json"]}\`
-- \`{"command": "ps", "args": ["-o", "pid,comm,%cpu", "-A"]}\`
+- \`{"command": "ps", "args": ["-eo", "pid,comm,pcpu,pmem", "--sort=-pcpu"]}\`
 
 ## Limits and failures
-- \`COMMAND_NOT_ALLOWED\`: the executable is not in the allowlist; do not retry with variants, tell the user.
-- \`ARGUMENT_NOT_ALLOWED\`: ls/find/stat/du cannot take absolute paths or \`..\`; find cannot use -exec, -delete, -L and similar; ps cannot show environments; date cannot set the clock.
-- Default timeout 5s; stdout/stderr are truncated (default 32 KB). Non-zero exit returns \`COMMAND_FAILED\` with stderr.
+- Non-zero exit returns \`COMMAND_FAILED\` with stderr; output is truncated past the configured size; a timeout kills the command.
 - Secret environment variables are never passed to the child process.
+- Not for Macs or other paired computers (use \`control_remote_computer\`), not for Home Assistant.
 `;
+
+const MODE_DOCS: Record<CLIMode, string> = {
+  full: `# run_cli_command
+
+Runs any executable on the PLAIOS server, as the user the server runs as, without restrictions. For pipes, redirects or several commands, run a shell: \`{"command": "bash", "args": ["-lc", "df -h | sort -k5 -r"]}\`. It can change the system, so confirm with the user before anything destructive (deleting, stopping services, installing).
+`,
+  "read-only": `# run_cli_command
+
+Runs read-only inspection tools on the PLAIOS server, on any path: files (ls, cat, head, tail, grep, find, stat, wc, du), system (df, free, uname, uptime, lscpu, lsblk, sensors, smartctl, ps, top), network (ip, ss), services (systemctl status/list, journalctl) and Docker (docker ps/images/stats/inspect/logs). No shell, no pipes; commands that change things are refused with \`COMMAND_NOT_ALLOWED\` or \`ARGUMENT_NOT_ALLOWED\`.
+`,
+  allowlist: `# run_cli_command
+
+Runs one executable from the operator's allowlist (the \`command\` description lists them), only inside the PLAIOS workspace: ls/find/stat/du cannot take absolute paths or \`..\`, find cannot run actions, ps cannot show environments, date cannot set the clock. Do not retry \`COMMAND_NOT_ALLOWED\` with variants; tell the user.
+`,
+};
 
 const manifest: CapabilityManifest = {
   id: "cli.run-command",
@@ -82,7 +92,7 @@ const manifest: CapabilityManifest = {
   permissions: ["cli.execute"],
   tags: ["cli", "command", "local"],
   execution: {
-    timeoutMs: 5_000,
+    timeoutMs: 30_000,
     idempotent: false,
   },
   examples: [
@@ -126,6 +136,19 @@ const manifest: CapabilityManifest = {
 
 const execFileAsync = promisify(execFile);
 
+const readOnlyCommands = [
+  "echo", "pwd", "ls", "whoami", "id", "date", "find", "stat", "df", "du", "free", "uname", "uptime", "hostname",
+  "ps", "top", "which", "whereis", "dpkg-query", "cat", "head", "tail", "grep", "wc", "file", "lscpu", "lsblk",
+  "lsusb", "lspci", "lsmod", "findmnt", "sensors", "smartctl", "nproc", "ip", "ss", "systemctl", "journalctl", "docker",
+];
+
+/** For tools that can also change things, the subcommands that only read. */
+const readOnlySubcommands: Record<string, ReadonlySet<string>> = {
+  systemctl: new Set(["status", "list-units", "list-unit-files", "list-timers", "is-active", "is-enabled", "is-failed", "show", "cat"]),
+  docker: new Set(["ps", "images", "stats", "inspect", "logs", "version", "info", "top", "port", "df", "events", "history"]),
+  ip: new Set(["addr", "address", "a", "link", "l", "route", "r", "neigh", "n", "-br", "-j", "-4", "-6", "-s"]),
+};
+
 const defaultAllowedCommands = [
   "echo",
   "pwd",
@@ -161,6 +184,7 @@ export class RunCLICommandCapability
 {
   readonly manifest: CapabilityManifest;
 
+  private readonly mode: CLIMode;
   private readonly allowedCommands: ReadonlySet<string>;
   private readonly cwd?: string;
   private readonly env: Environment;
@@ -168,11 +192,12 @@ export class RunCLICommandCapability
   private readonly maxOutputBytes: number;
 
   constructor(options: RunCLICommandCapabilityOptions) {
-    this.allowedCommands = new Set(normalizeAllowedCommands(options.allowedCommands));
-    this.manifest = withAllowedCommands([...this.allowedCommands]);
+    this.mode = parseMode(options.mode);
+    this.allowedCommands = new Set(this.mode === "read-only" ? readOnlyCommands : normalizeAllowedCommands(options.allowedCommands));
+    this.manifest = manifestFor(this.mode, [...this.allowedCommands]);
     this.cwd = options.cwd;
     this.env = options.env;
-    this.timeoutMs = options.timeoutMs ?? 5_000;
+    this.timeoutMs = options.timeoutMs ?? 30_000;
     this.maxOutputBytes = Math.max(1_024, Math.trunc(options.maxOutputBytes ?? 32_768));
   }
 
@@ -181,13 +206,14 @@ export class RunCLICommandCapability
   }
 
   docs(): string {
-    return DOCS;
+    return MODE_DOCS[this.mode] + COMMON_DOCS;
   }
 
   microfrontendData() {
     return {
       cwd: this.cwd ?? process.cwd(),
-      allowedCommands: [...this.allowedCommands],
+      mode: this.mode,
+      allowedCommands: this.mode === "full" ? [] : [...this.allowedCommands],
       timeoutMs: this.timeoutMs,
       maxOutputBytes: this.maxOutputBytes,
       shell: false,
@@ -201,14 +227,14 @@ export class RunCLICommandCapability
   ): Promise<CapabilityResult<RunCLICommandOutput>> {
     const command = input.command?.trim();
     if (!command) return failure("VALIDATION_ERROR", "Input 'command' is required");
-    if (!this.allowedCommands.has(command)) {
-      return failure("COMMAND_NOT_ALLOWED", `Command "${command}" is not allowed`);
+    if (this.mode !== "full" && !this.allowedCommands.has(command)) {
+      return failure("COMMAND_NOT_ALLOWED", `Command "${command}" is not allowed in ${this.mode} mode`);
     }
     const args = input.args;
     if (!Array.isArray(args) || args.some((argument) => typeof argument !== "string")) {
       return failure("VALIDATION_ERROR", "Input 'args' must be an array of strings");
     }
-    const argumentError = validateArguments(command, args);
+    const argumentError = this.mode === "full" ? undefined : validateArguments(command, args, this.mode);
     if (argumentError) return failure("ARGUMENT_NOT_ALLOWED", argumentError);
 
     try {
@@ -218,6 +244,7 @@ export class RunCLICommandCapability
         timeout: this.timeoutMs,
         signal: context.signal,
         encoding: "utf8",
+        maxBuffer: 16 * 1024 * 1024,
       });
       return {
         success: true,
@@ -236,22 +263,36 @@ export class RunCLICommandCapability
   }
 }
 
-// The model sees the configured allowlist; execute() still enforces it.
-function withAllowedCommands(commands: readonly string[]): CapabilityManifest {
+const MODE_DESCRIPTIONS: Record<CLIMode, string> = {
+  full: "Runs any command on the PLAIOS server (Linux), as the server's user: inspect or manage files, disks, hardware, processes, services, Docker, packages, logs and network. Use bash -lc for pipes. Confirm with the user before destructive changes.",
+  "read-only": "Runs read-only inspection commands on the PLAIOS server (Linux) on any path: files, disks, hardware, processes, services, Docker, logs and network. Commands that change things are refused.",
+  allowlist: manifest.description,
+};
+
+// The model sees what this mode accepts; execute() still enforces it.
+function manifestFor(mode: CLIMode, commands: readonly string[]): CapabilityManifest {
   const schema = manifest.inputSchema as { properties: Record<string, object> };
   return {
     ...manifest,
+    description: MODE_DESCRIPTIONS[mode],
+    tags: mode === "allowlist" ? manifest.tags : [...(manifest.tags ?? []), "server", "linux", "system", "docker", "disk", "hardware", "logs", "processes", "services"],
     inputSchema: {
       ...schema,
       properties: {
         ...schema.properties,
         command: {
           type: "string",
-          description: `Executable name. Allowed: ${commands.join(", ")}.`,
+          description: mode === "full" ? "Executable name or path, e.g. df, docker, bash." : `Executable name. Allowed: ${commands.join(", ")}.`,
         },
       },
     },
   };
+}
+
+function parseMode(value: string | undefined): CLIMode {
+  const mode = value?.trim() || "full";
+  if (mode !== "full" && mode !== "read-only" && mode !== "allowlist") throw new Error(`mode must be full, read-only or allowlist: "${mode}"`);
+  return mode;
 }
 
 function normalizeAllowedCommands(value: readonly string[] | string | undefined): string[] {
@@ -262,9 +303,21 @@ function normalizeAllowedCommands(value: readonly string[] | string | undefined)
 }
 
 const workspaceCommands = new Set(["ls", "find", "stat", "du"]);
+const SECRET_FILE = /(^|[/=])\.env(\.[\w-]+)?$|id_(rsa|ecdsa|ed25519)$|\.(pem|key)$|credentials(\.json)?$|\/shadow$/;
 
-function validateArguments(command: string, args: readonly string[]): string | undefined {
-  if (workspaceCommands.has(command)) {
+function validateArguments(command: string, args: readonly string[], mode: CLIMode): string | undefined {
+  if (mode === "read-only") {
+    const allowed = readOnlySubcommands[command];
+    const subcommand = args.find((argument) => !argument.startsWith("-") || command === "ip");
+    if (allowed && subcommand !== undefined && !allowed.has(subcommand)) return `${command} ${subcommand} can change the system; only ${[...allowed].join(", ")} are allowed`;
+    if (command === "date" && args.some((argument) => argument === "-s" || argument.startsWith("--set"))) return "Setting the clock is not allowed";
+    if (command === "smartctl" && args.some((argument) => /^(-s|--smart|-t|--test|-X|--abort|-o|--offlineauto|-S|--saveauto)/.test(argument))) return "smartctl options that change the drive are not allowed";
+    if (command === "journalctl" && args.some((argument) => /^--(rotate|vacuum|flush|sync|relinquish)/.test(argument))) return "journalctl maintenance options are not allowed";
+    // Read-only still must not hand the model the secrets the host keeps out of its environment.
+    const secret = args.find((argument) => SECRET_FILE.test(argument));
+    if (secret) return `Reading secret files is not allowed: "${secret}"`;
+  }
+  if (mode === "allowlist" && workspaceCommands.has(command)) {
     const unsafePath = args.find((argument) => isUnsafeWorkspacePath(argument));
     if (unsafePath) return `Path outside the PLAIOS workspace is not allowed: "${unsafePath}"`;
     // A files0-from list echoes each unreadable "name" back, which would leak any file's contents (.env included).
@@ -278,8 +331,9 @@ function validateArguments(command: string, args: readonly string[]): string | u
     if (unsafeAction) return `find action "${unsafeAction}" is not allowed`;
   }
   if (command === "ps") {
-    const environmentFlag = args.find((argument) =>
-      argument === "e" || (!argument.startsWith("-") && /e/i.test(argument)),
+    // BSD "e" (in "e", "aux e", "auxe") prints other processes' environments, secrets included; "-e" and -o fields are fine.
+    const environmentFlag = args.find((argument, index) =>
+      /^[a-zA-Z]+$/.test(argument) && argument.includes("e") && !/^(-o|-O|o|O|--format|-p|p|-u|-U|-C|--sort|k)$/.test(args[index - 1] ?? ""),
     );
     if (environmentFlag) return `ps environment flag "${environmentFlag}" is not allowed`;
   }
