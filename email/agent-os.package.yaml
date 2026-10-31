@@ -1,0 +1,60 @@
+schemaVersion: 1
+id: email
+name: Email
+version: 0.1.0
+description: Watches Gmail, Outlook and IMAP mailboxes; the fast model sorts every new email and the important ones are saved to memory and sent to you
+interfaces:
+  - id: email.input
+    kind: input
+    name: EmailInput
+    entry: .
+    export: .
+    className: EmailInput
+    description: Receives every new email over IMAP IDLE, categorizes it with System 1, remembers important ones and notifies on the chosen output; exposes email.inbox
+    channel: email
+    surfaces: [email, local]
+    permissions: [email.read, memory.write, network.imap]
+    required: [database, system1]
+    optional: [memory]
+    config:
+      - key: outputChannel
+        env: EMAIL_OUTPUT_CHANNEL
+        type: string
+        required: true
+        description: Output channel that receives notifications for important emails (for example telegram)
+      - key: userId
+        env: AGENT_OS_USER_ID
+        type: string
+        required: false
+        description: User the emails and memories belong to
+      - key: secretsKey
+        env: SECRETS_KEY
+        type: string
+        required: true
+        description: Key that encrypts mail passwords and tokens in the database (AES-256-GCM); keep it secret and stable
+      - key: categories
+        env: EMAIL_CATEGORIES
+        type: string
+        required: false
+        default: work,personal,finance,bills,travel,shopping,newsletter,social,notifications,security,spam
+        description: Comma-separated categories the fast model chooses from
+      - key: importanceRules
+        env: EMAIL_IMPORTANCE_RULES
+        type: string
+        required: false
+        description: Your own rules for what is important, in plain words (for example "anything from my accountant or about UniHelp")
+      - key: threshold
+        env: EMAIL_THRESHOLD
+        type: number
+        required: false
+        default: 0.7
+        description: Importance from 0 to 1 above which an email is remembered and notified
+    capability:
+      id: email.inbox
+      version: 1.0.0
+      name: read_email
+      description: Read recent emails from every connected mailbox, already categorized and scored for importance.
+      permissions: [email.read]
+      tags: [email, mail, inbox, gmail, outlook]
+    startup: { when: ifConfigured }
+    web: { entry: ./web/input, export: default, styles: ./web/styles.css }
