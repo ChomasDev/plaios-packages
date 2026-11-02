@@ -1,6 +1,6 @@
 {
   "name": "@plaios/claude-code",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Claude Code AI provider and management surface for PLAIOS",
   "keywords": [
     "plaios",
@@ -11,6 +11,48 @@
     "claude-code",
     "anthropic"
   ],
+  "plaios": {
+    "setup": [
+      {
+        "step": "ai",
+        "label": "Claude Code with your Claude account",
+        "icon": "✳",
+        "hint": "run `claude` once and sign in",
+        "model": {
+          "env": "CLAUDE_CODE_MODEL",
+          "fallback": "claude-opus-5-5"
+        },
+        "components": [
+          {
+            "interface": "claude-code.ai",
+            "instanceId": "ai:claude-code"
+          }
+        ]
+      },
+      {
+        "step": "ai",
+        "label": "Claude with an Anthropic API key",
+        "icon": "◬",
+        "model": {
+          "env": "CLAUDE_CODE_MODEL",
+          "fallback": "claude-opus-5-5"
+        },
+        "components": [
+          {
+            "interface": "claude-code.ai",
+            "instanceId": "ai:claude-code"
+          }
+        ],
+        "secrets": [
+          {
+            "env": "ANTHROPIC_API_KEY",
+            "question": "Anthropic API key",
+            "secret": true
+          }
+        ]
+      }
+    ]
+  },
   "private": false,
   "type": "module",
   "sideEffects": [

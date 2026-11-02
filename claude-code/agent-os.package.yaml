@@ -1,7 +1,7 @@
 schemaVersion: 1
 id: claude-code
 name: Claude Code
-version: 0.1.0
+version: 0.1.1
 description: Claude as the PLAIOS model through the Claude Agent SDK, with your Claude Code login or an Anthropic API key, structured tool calling and no built-in tools
 interfaces:
   - id: claude-code.ai
