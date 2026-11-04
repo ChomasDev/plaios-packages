@@ -1,6 +1,6 @@
 {
   "name": "@plaios/action-home-assistant",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Dynamic Home Assistant controls and agent capability for PLAIOS",
   "keywords": [
     "plaios",

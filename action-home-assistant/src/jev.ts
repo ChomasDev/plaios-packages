@@ -366,10 +366,11 @@ export class HomeAssistantJevCapability
         .filter(({ score }) => score >= ENTITY_THRESHOLD),
     );
 
+    // Failures, not answers: a direct (bypassModel) run then falls back to the generative
+    // model, which sees the whole conversation and can resolve "spegnile" or ask back.
     if (action === "none") {
-      return success(
-        "none",
-        [],
+      return failure(
+        "NOT_A_HOME_COMMAND",
         italian
           ? "Non mi sembra un comando per la casa. Puoi dirmi cosa vuoi accendere, spegnere o cambiare?"
           : "That doesn't look like a home-control command.",
@@ -382,9 +383,8 @@ export class HomeAssistantJevCapability
     }
 
     if (selected.length === 0) {
-      return success(
-        action,
-        [],
+      return failure(
+        "NO_DEVICE_MATCH",
         italian
           ? "Non ho capito a quale dispositivo ti riferisci. Puoi dirmi la stanza o il nome della luce?"
           : "I couldn't match that request to a device. Can you name the room or the light?",
@@ -546,8 +546,10 @@ function numericValue(text: string, action: HomeAssistantAction): number | null 
   return Number.isFinite(value) ? value : null;
 }
 
+// Verb stems catch clitic forms such as "spegnile" or "accendila"; articles and common
+// words catch the rest of an Italian request.
 function isItalian(text: string): boolean {
-  return /\b(accendi|spegni|spegnere|imposta|metti|apri|chiudi|togli|mostra|fammi|vedere|inserisci|protocollo|antifurto|allarme|tutte|tutti|luci|luce|ufficio|cucina|salotto|telecamere|televisione|cancello|bianche|bianca|verdi|rosso|giallo)\b/i.test(
+  return /\b(?:spegn|accend|impost|mett|apr|chiud|togl|mostr|famm|inser|disinser|alz|abbass|aument|diminu|attiv|disattiv)\p{L}*|\b(?:protocollo|antifurto|allarme|tutt[eio]|luc[ei]|ufficio|cucina|salotto|camera|telecamere|televisione|cancello|bianc[ahe]|verd[ei]|ross[oaie]|giall[oaie]|il|lo|la|le|gli|della|delle|per|che|non|grazie|ciao)\b/iu.test(
     text,
   );
 }
