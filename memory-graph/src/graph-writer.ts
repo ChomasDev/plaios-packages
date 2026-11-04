@@ -23,6 +23,13 @@ import {
   type GraphNode,
 } from "./types.js";
 import { toGraphNode } from "./node-mapper.js";
+import {
+  chunkId,
+  chunkTitle,
+  peopleIn,
+  shouldChunk,
+  splitIntoChunks,
+} from "./memory-chunker.js";
 
 export class GraphWriter {
   constructor(
@@ -31,9 +38,44 @@ export class GraphWriter {
     private readonly embedder: EmbeddingProvider,
     private readonly extractor: EntityExtractor,
     private readonly clock: () => Date,
+    private readonly chunking: { threshold: number; target: number },
   ) {}
 
+  /** Long non-working memories are kept whole and also saved as scene-sized chunks. */
   async remember(entry: MemoryEntry): Promise<void> {
+    if (!shouldChunk(entry, this.chunking.threshold)) return this.rememberOne(entry);
+    const pieces = splitIntoChunks(entry.content as string, this.chunking.target);
+    const mentions = await this.extractor.extract(entry);
+    const entityLabels = entry.metadata?.entityLabels;
+    const labels = [
+      ...mentions.filter(({ type }) => type === MemoryNodeType.Person).map(({ name }) => name),
+      ...(Array.isArray(entityLabels)
+        ? entityLabels.filter((label): label is string => typeof label === "string")
+        : []),
+    ];
+    const title = entry.metadata?.title ?? entry.metadata?.narrativeArc ?? labelFor(entry.content).slice(0, 60);
+    // The original text stays intact; recall uses the chunks instead of it.
+    await this.rememberOne({ ...entry, metadata: { ...entry.metadata, chunkCount: pieces.length } });
+    for (const [index, content] of pieces.entries()) {
+      const id = chunkId(entry.id, index);
+      await this.rememberOne({
+        ...entry,
+        id,
+        content,
+        metadata: {
+          ...entry.metadata,
+          chunkOf: entry.id,
+          chunkIndex: index,
+          chunkCount: pieces.length,
+          title: chunkTitle(title, index, pieces.length),
+          people: peopleIn(content, labels),
+        },
+      });
+      await this.link({ sourceId: id, targetId: entry.id, type: "part-of" });
+    }
+  }
+
+  private async rememberOne(entry: MemoryEntry): Promise<void> {
     const now = this.clock();
     const current = await this.store.node(entry.id);
     const addedMemoryDate = current?.createdAt

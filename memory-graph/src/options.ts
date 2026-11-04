@@ -27,11 +27,20 @@ export interface GraphMemoryOptions {
   maxEdgesPerNode?: number;
   /** Minimum cosine score accepted as a vector seed. */
   minimumVectorSimilarity?: number;
+  /** Memories longer than this (characters) are also stored as chunks. Defaults to 1200. */
+  chunkThresholdChars?: number;
+  /** Target chunk size in characters. Defaults to 700. */
+  chunkTargetChars?: number;
+  /** Vote of the vector channel in hybrid fusion: 1 with an injected embedder, 0.35 with the hash fallback. */
+  vectorChannelWeight?: number;
   now?: () => Date;
 }
 
 export interface ResolvedGraphOptions {
   accessBoost: number;
+  chunkThresholdChars: number;
+  chunkTargetChars: number;
+  vectorChannelWeight: number;
   clock: () => Date;
   fallbackScanLimit: number;
   halfLifeMs: number;
@@ -52,6 +61,8 @@ export function resolveGraphOptions(
 
   return {
     accessBoost: nonNegative(options.accessBoost ?? 0.1, "accessBoost"),
+    chunkThresholdChars: positiveInteger(options.chunkThresholdChars ?? 1_200, "chunkThresholdChars"),
+    chunkTargetChars: positiveInteger(options.chunkTargetChars ?? 700, "chunkTargetChars"),
     clock: options.now ?? (() => new Date()),
     fallbackScanLimit: positiveInteger(
       options.fallbackScanLimit ?? 5_000,
@@ -75,6 +86,12 @@ export function resolveGraphOptions(
     traversalDiscount: bounded(
       options.traversalDiscount ?? 0.72,
       "traversalDiscount",
+    ),
+    // The built-in hash embedding only counts shared tokens, and long texts collide with
+    // every query: its channel gets a smaller vote than exact and lexical matches.
+    vectorChannelWeight: bounded(
+      options.vectorChannelWeight ?? (options.embeddingProvider ? 1 : 0.35),
+      "vectorChannelWeight",
     ),
   };
 }
