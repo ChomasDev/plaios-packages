@@ -65,33 +65,94 @@ export function cosine(
 
 // Exact channel rewards a contiguous run of meaningful terms (filler stripped),
 // so a single entity name such as "Alessia" still counts as an exact hit.
+// The lexical channel also credits a name prefix ("vale" -> "valentina") at half
+// weight and is normalized by length, so long texts do not match every query.
 export function hybridLexicalScores(
   query: string,
   value: string,
+  tags = "",
 ): { exact: number; lexical: number } {
-  const terms = searchTerms(query);
+  return lexicalScores(searchTerms(query), normalizedTokens(value), undefined, normalizedTokens(tags));
+}
+
+/**
+ * `weights` (term -> IDF) lets rare words such as a name count more than
+ * common ones such as "sera"; without it every term weighs the same.
+ * `tagTokens` are words found only in metadata (story arc, entity tags): they
+ * count half, so a short fact naming a person beats a long story merely tagged
+ * with that person.
+ */
+export function lexicalScores(
+  terms: readonly string[],
+  tokens: readonly string[],
+  weights?: ReadonlyMap<string, number>,
+  tagTokens: readonly string[] = [],
+): { exact: number; lexical: number } {
   if (terms.length === 0) return { exact: 0, lexical: 0 };
 
-  const tokens = normalizedTokens(value);
   const searchable = new Set(tokens);
-  const matches = terms.filter((term) => searchable.has(term));
-  const lexical = matches.length / terms.length;
-  let exact = 0;
+  const tags = new Set(tagTokens);
+  const weightOf = (term: string) => weights?.get(term) ?? 1;
+  const creditOf = (term: string) =>
+    termCredit(term, searchable, tokens) || TAG_CREDIT * termCredit(term, tags, tagTokens);
+  const total = terms.reduce((sum, term) => sum + weightOf(term), 0);
+  const credit = terms.reduce((sum, term) => sum + weightOf(term) * creditOf(term), 0);
+  const lexical = (credit / total) * lengthNormalization(tokens.length);
 
   if (terms.length === 1) {
-    exact = searchable.has(terms[0]!) ? 1 : 0;
-  } else {
-    for (let index = 0; index <= tokens.length - terms.length; index += 1) {
-      if (!terms.every((term, offset) => tokens[index + offset] === term)) continue;
-      exact = 1;
-      break;
-    }
+    return { exact: searchable.has(terms[0]!) ? 1 : tags.has(terms[0]!) ? TAG_CREDIT : 0, lexical };
+  }
+  let exact = 0;
+  for (let index = 0; index <= tokens.length - terms.length; index += 1) {
+    if (!terms.every((term, offset) => tokens[index + offset] === term)) continue;
+    exact = 1;
+    break;
   }
 
   return { exact, lexical };
 }
 
-function searchTerms(value: string): string[] {
+const TAG_CREDIT = 0.5;
+
+/** Inverse document frequency of each term over the candidate token sets. */
+export function termWeights(
+  terms: readonly string[],
+  tokenSets: readonly ReadonlySet<string>[],
+): Map<string, number> {
+  const count = Math.max(1, tokenSets.length);
+  const vocabulary = new Set<string>();
+  for (const tokens of tokenSets) for (const token of tokens) vocabulary.add(token);
+  return new Map(terms.map((term) => {
+    const forms = [
+      term,
+      ...(term.length < PREFIX_MIN_LENGTH
+        ? []
+        : [...vocabulary].filter((token) => token.length > term.length && token.startsWith(term))),
+    ];
+    const frequency = tokenSets.filter((tokens) => forms.some((form) => tokens.has(form))).length;
+    return [term, Math.log(1 + count / (1 + frequency))];
+  }));
+}
+
+const PREFIX_MIN_LENGTH = 4;
+const PREFIX_CREDIT = 0.5;
+const LENGTH_PIVOT_TOKENS = 150;
+
+function termCredit(term: string, searchable: ReadonlySet<string>, tokens: Iterable<string>): number {
+  if (searchable.has(term)) return 1;
+  if (term.length < PREFIX_MIN_LENGTH) return 0;
+  for (const token of tokens) {
+    if (token.length > term.length && token.startsWith(term)) return PREFIX_CREDIT;
+  }
+  return 0;
+}
+
+function lengthNormalization(tokenCount: number): number {
+  if (tokenCount <= LENGTH_PIVOT_TOKENS) return 1;
+  return 1 / (1 + 0.5 * Math.log2(tokenCount / LENGTH_PIVOT_TOKENS));
+}
+
+export function searchTerms(value: string): string[] {
   const tokens = normalizedTokens(value).filter((token) =>
     (token.length >= 3 || SHORT_SEARCH_TERMS.has(token)) &&
     !SEARCH_STOPWORDS.has(token)
@@ -111,8 +172,9 @@ function normalize(value: string): string {
   return value.trim().toLowerCase();
 }
 
-function normalizedTokens(value: string): string[] {
-  return value.normalize("NFKC").toLowerCase().match(/[\p{L}\p{N}_'-]+/gu) ?? [];
+// Apostrophes split Italian elisions: "dell'Einaudi" -> "dell", "einaudi".
+export function normalizedTokens(value: string): string[] {
+  return value.normalize("NFKC").toLowerCase().match(/[\p{L}\p{N}_-]+/gu) ?? [];
 }
 
 const SHORT_SEARCH_TERMS = new Set(["ai", "ia"]);
@@ -130,6 +192,16 @@ const SEARCH_STOPWORDS = new Set([
   "sei", "sono", "su", "supplied", "the", "through", "to", "tra", "un",
   "una", "uno", "user", "was", "what", "when", "where", "which", "who",
   "why", "with", "would",
+  // Italian articulated prepositions, possessives and request verbs.
+  "agli", "ai", "allo", "col", "coi", "degli", "dello", "negli", "nelle",
+  "nello", "sugli", "sui", "sul", "sulla", "sulle", "sullo", "mio", "mia",
+  "miei", "mie", "tuo", "tua", "tuoi", "tue", "suo", "sua", "suoi", "sue",
+  "dirmi", "dimmi", "riesci", "sapere", "raccontami", "parlami", "ricordi",
+  "fin", "ora", "adesso", "qualcosa", "tutto", "quando", "quanto", "quanti",
+  "quante", "quale", "quali", "avuto", "avere", "essere", "stato", "stata",
+  "era", "ero", "mi", "ti", "ci", "si", "me", "te", "nato", "nata", "andata",
+  "andato", "successo", "fatto", "abbiamo", "sapevi", "detto", "com", "cos",
+  "dov", "dell", "nell", "sull", "all", "dall", "quell",
 ]);
 
 function hashedId(prefix: string, value: string): string {

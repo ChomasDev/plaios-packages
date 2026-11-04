@@ -1,7 +1,7 @@
 schemaVersion: 1
 id: memory-graph
 name: Graph Memory
-version: 0.5.0
+version: 0.5.1
 description: Weighted, decaying, vector-ranked property graph memory with an interactive explorer
 interfaces:
   - id: memory-graph.memory
@@ -38,6 +38,16 @@ interfaces:
         required: false
         default: 2
         description: Maximum relation traversal depth during recall
+      - key: chunkThresholdChars
+        type: number
+        required: false
+        default: 1200
+        description: Long memories above this many characters are also stored as scene-sized chunks used by recall
+      - key: chunkTargetChars
+        type: number
+        required: false
+        default: 700
+        description: Target size in characters of each memory chunk
     startup:
       when: always
     web:

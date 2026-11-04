@@ -1,6 +1,6 @@
 {
   "name": "@plaios/memory-graph",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Weighted, decaying, vector-ranked graph memory capability for PLAIOS",
   "keywords": [
     "plaios",
@@ -34,7 +34,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/build-web.mjs",
-    "test": "pnpm build && node --test dist/test/index.test.js test/best-match.test.mjs",
+    "test": "pnpm build && node --test dist/test/index.test.js dist/test/chunking.test.js test/best-match.test.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {

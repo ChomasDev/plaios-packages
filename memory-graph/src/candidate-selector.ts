@@ -1,8 +1,11 @@
 import type { MemoryQuery } from "@plaios/core/domain";
 import {
   cosine,
-  hybridLexicalScores,
+  lexicalScores,
+  normalizedTokens,
+  searchTerms,
   searchableText,
+  termWeights,
 } from "./graph-values.js";
 import type { RankedNode, StoredNode } from "./internal-types.js";
 import type { ResolvedGraphOptions } from "./options.js";
@@ -56,20 +59,31 @@ export class CandidateSelector {
   ): Promise<RankedNode[]> {
     const candidates = await this.vectorCandidates(vector, query, limit);
     const now = this.options.clock();
-    const scored = candidates.nodes
+    const terms = searchTerms(text);
+    const matching = candidates.nodes
       .filter((node) => this.matches(node, query, now))
-      .map((node) => this.score(node, text, vector, candidates.scores, now))
+      .map((node) => ({
+        node,
+        tokens: normalizedTokens(searchableText(node.type, node.label, node.data)),
+        tags: normalizedTokens(JSON.stringify(node.metadata ?? {})),
+      }));
+    const weights = termWeights(terms, matching.map(({ tokens, tags }) => new Set([...tokens, ...tags])));
+    const scored = matching
+      .map(({ node, tokens, tags }) =>
+        this.score(node, terms, tokens, tags, weights, vector, candidates.scores, now))
       .filter(({ exact, lexical, vectorScore }) =>
         exact > 0 || lexical > 0 ||
         vectorScore >= this.options.minimumVectorSimilarity);
 
-    return fuseHybridChannels(scored, this.options.minimumVectorSimilarity)
+    return fuseHybridChannels(scored, this.options.minimumVectorSimilarity, this.options.vectorChannelWeight)
       .slice(0, Math.max(this.options.seedLimit, limit))
       .map(({ node, score }) => ({ node, score, depth: 0 }));
   }
 
   matches(node: StoredNode, query: MemoryQuery, now: Date): boolean {
     if (query.userId !== undefined && node.userId !== query.userId) return false;
+    // A text search ranks the scene-sized chunks of a long memory, not its whole text.
+    if (query.text?.trim() && isChunkedParent(node)) return false;
     if (query.sessionId !== undefined && node.sessionId !== query.sessionId) {
       return false;
     }
@@ -88,16 +102,16 @@ export class CandidateSelector {
 
   private score(
     node: StoredNode,
-    text: string,
+    terms: readonly string[],
+    tokens: readonly string[],
+    tags: readonly string[],
+    weights: ReadonlyMap<string, number>,
     vector: readonly number[],
     vectorScores: ReadonlyMap<string, number>,
     now: Date,
   ) {
     const vectorScore = vectorScores.get(node.id) ?? cosine(vector, node.embedding);
-    const { exact, lexical } = hybridLexicalScores(
-      text,
-      searchableText(node.type, node.label, node.data, node.metadata),
-    );
+    const { exact, lexical } = lexicalScores(terms, tokens, weights, tags);
     const importance = weightScore(this.weight(node, now));
     return { node, vectorScore, lexical, exact, importance };
   }
@@ -133,10 +147,14 @@ export class CandidateSelector {
  * AURA-style deterministic fusion: exact, lexical, and vector searches rank
  * independently, then reciprocal-rank fusion rewards nodes found by multiple
  * channels. This prevents a noisy hash-vector match from hiding an exact name.
+ * Each vote is scaled by its score relative to the channel's best, so matching
+ * two of three terms outweighs matching one, and importance only breaks ties: repeated recalls
+ * inflate the weight of old memories and must not outrank better matches.
  */
 function fuseHybridChannels(
   candidates: readonly HybridCandidate[],
   minimumVectorSimilarity: number,
+  vectorWeight: number,
 ): Array<{ node: StoredNode; score: number }> {
   const scores = new Map<string, number>();
   const hits = new Map<string, number>();
@@ -147,7 +165,7 @@ function fuseHybridChannels(
   addChannel(
     candidates.filter(({ vectorScore }) => vectorScore >= minimumVectorSimilarity),
     ({ vectorScore }) => vectorScore,
-    1,
+    vectorWeight,
   );
 
   return [...scores.entries()]
@@ -156,7 +174,7 @@ function fuseHybridChannels(
       const hitBoost = 1 + Math.min((hits.get(id) ?? 1) - 1, 4) * 0.05;
       return {
         node: candidate.node,
-        score: fused * hitBoost + candidate.importance * 0.001,
+        score: fused * hitBoost + candidate.importance * IMPORTANCE_TIE_BREAK,
       };
     })
     .sort((left, right) => right.score - left.score
@@ -168,12 +186,21 @@ function fuseHybridChannels(
     weight: number,
   ): void {
     const ranked = [...channel].sort((left, right) => value(right) - value(left));
+    const best = ranked.length > 0 ? value(ranked[0]!) : 0;
     ranked.forEach((candidate, index) => {
       const id = candidate.node.id;
-      scores.set(id, (scores.get(id) ?? 0) + weight / (60 + index + 1));
+      const relative = best > 0 ? value(candidate) / best : 0;
+      scores.set(id, (scores.get(id) ?? 0) + weight * relative / (60 + index + 1));
       hits.set(id, (hits.get(id) ?? 0) + 1);
     });
   }
+}
+
+const IMPORTANCE_TIE_BREAK = 0.0001;
+
+function isChunkedParent(node: StoredNode): boolean {
+  const metadata = node.entry?.metadata ?? node.metadata;
+  return Number(metadata?.chunkCount) > 0 && metadata?.chunkOf === undefined;
 }
 
 function weightScore(weight: number): number {

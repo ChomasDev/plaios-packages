@@ -1,7 +1,7 @@
 schemaVersion: 1
 id: action-home-assistant
 name: Home Assistant
-version: 0.2.1
+version: 0.2.2
 description: Discover and control Home Assistant lights, switches, TVs, media players, covers, climate, cameras, sensors, and other entities
 interfaces:
   - id: home-assistant.action

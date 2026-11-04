@@ -21,6 +21,7 @@ import {
   type ResolvedGraphOptions,
 } from "./options.js";
 import type { GraphData } from "./graph-view-model.js";
+import type { StoredNode } from "./internal-types.js";
 import type { GraphEdge, GraphNode, NodeType } from "./types.js";
 import { MEMORY_GRAPH_OPENUI } from "./openui.js";
 
@@ -197,6 +198,10 @@ export class GraphMemory implements Memory, Capability<GraphWriteInput, GraphWri
       embedder,
       extractor,
       this.config.clock,
+      {
+        threshold: this.config.chunkThresholdChars,
+        target: this.config.chunkTargetChars,
+      },
     );
     this.navigator = new GraphNavigator(
       this.store,
@@ -226,13 +231,26 @@ export class GraphMemory implements Memory, Capability<GraphWriteInput, GraphWri
     return entry;
   }
 
-  async recall(query: MemoryQuery = {}): Promise<readonly MemoryEntry[]> {
+  /** `reinforce: false` skips the access boost for over-fetched candidates. */
+  async recall(
+    query: MemoryQuery & { reinforce?: boolean } = {},
+  ): Promise<readonly MemoryEntry[]> {
     await this.ready;
     const ranked = await this.retriever.discover(query);
-    await this.retriever.reinforce(ranked.map(({ node }) => node));
+    // Hosts that over-fetch candidates and keep a few pass reinforce: false, then reinforce() the kept ones.
+    if (query.reinforce !== false) {
+      await this.retriever.reinforce(ranked.map(({ node }) => node));
+    }
     const now = this.config.clock();
     return ranked.map((item) =>
       toMemoryEntry(item, this.retriever.weight(item.node, now)));
+  }
+
+  /** Counts an access for memories a host actually used, after a recall with reinforce: false. */
+  async reinforce(ids: readonly string[]): Promise<void> {
+    await this.ready;
+    const nodes = await Promise.all([...new Set(ids)].map((id) => this.store.node(id)));
+    await this.retriever.reinforce(nodes.filter((node): node is StoredNode => node !== undefined));
   }
 
   async forget(id: string): Promise<boolean> {

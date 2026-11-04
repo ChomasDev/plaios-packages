@@ -198,6 +198,7 @@ export class DefaultAgentLoop implements AgentLoop {
 
     const summaries: string[] = [];
     const images: Array<{ path: string; mediaType: string }> = [];
+    let failures = 0;
     for (const capability of capabilities) {
       const callId = `direct-${capability.manifest.id}`;
       await emit(options, {
@@ -234,6 +235,7 @@ export class DefaultAgentLoop implements AgentLoop {
           capability: capability.manifest.name,
           result,
         });
+        if (!result.success) failures += 1;
         summaries.push(summarizeCapabilityResult(result));
         const image = imageFromCapabilityResult(result);
         if (image) images.push(image);
@@ -247,8 +249,15 @@ export class DefaultAgentLoop implements AgentLoop {
           capability: capability.manifest.name,
           error: messageText,
         });
+        failures += 1;
         summaries.push(messageText);
       }
+    }
+
+    // The fast path could not handle it (no device matched, not a command, error): the
+    // generative model gets the same capabilities plus the whole conversation instead.
+    if (capabilities.length > 0 && failures === capabilities.length) {
+      return this.run(message, { ...options, bypassModel: false });
     }
 
     const text = summaries.filter(Boolean).join("\n") || "Done.";
