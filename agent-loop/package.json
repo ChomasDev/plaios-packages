@@ -1,6 +1,6 @@
 {
   "name": "@plaios/agent-loop",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Default model and capability execution loop for PLAIOS",
   "keywords": ["plaios", "agent", "loop", "capabilities"],
   "private": false,
@@ -14,7 +14,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "pnpm build && node --test dist/test/index.test.js",
+    "test": "pnpm build && node --test dist/test/index.test.js dist/test/direct-fallback.test.js",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
